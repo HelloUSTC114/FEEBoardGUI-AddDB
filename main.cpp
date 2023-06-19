@@ -46,11 +46,16 @@ int main(int argc, char *argv[])
     // ReadSiPMTestFile(2, bottom);
     // SiPMTestResult res;
     // res.GenerateFromSiPMTestFile(1, bottom);
+    gDBManager->Init("F:\\Projects\\FEEDistri\\DataBase\\Calibration.db");
+    // SiPMTestResult res;
+    // res.GenerateFromSiPMTestFile(0, bottom);
+    // res.WriteIntoDB();
+    // BoardTestResult res;
+    // res.GenerateFromSource(0);
+    // res.WriteIntoDB();
 
     GenerateDBFromSource();
-
     return 0;
-
     QApplication qapp(argc, argv);
     new TApplication("QTCanvas Demo", &argc, argv);
 

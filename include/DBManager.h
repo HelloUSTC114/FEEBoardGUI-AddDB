@@ -2,35 +2,24 @@
 #define DBMANAGER_H
 
 #include <QtSql/QSqlDatabase>
+#include <QtSql/QSqlQuery>
 #include <QString>
+#include <QProcess>
 #include <vector>
 #include <map>
 
 #define gDBManager (DBManager::Instance())
 
-class DBManager
-{
-public:
-    QSqlDatabase &GetDB() { return fDataBase; }
-    static DBManager *Instance();
-
-    bool OpenDB(QString sDBName);
-    void CloseDB();
-
-private:
-    DBManager();
-    ~DBManager();
-
-    bool fInitiated = 0;
-    void Init(QString sDBName = "CalibrationDB.db");
-
-    QSqlDatabase fDataBase;
-};
-
 enum GAINTYPE
 {
     hg = 0,
     lg
+};
+
+enum SIPMBOARDTYPE
+{
+    bottom,
+    top
 };
 
 struct AMPInfo
@@ -50,6 +39,107 @@ struct BiasInfo
     double vBiasValue[32];
 };
 
+class DBManager
+{
+public:
+    QSqlDatabase &GetDB() { return fDataBase; }
+    static DBManager *Instance();
+
+    bool OpenDB(QString sDBName);
+    void CloseDB();
+
+    bool DeleteFromTable(QString sTableName, int chID, int boardNo);
+
+    /// @brief Insert Channel info in database
+    /// @param boardNo boardno for basic info
+    /// @param values values for 32 ch
+    /// @param valids whether this channel is valid
+    /// @return ID for the channel info
+    int InsertChannelInfo(int boardNo, double *values, bool *valids);
+    bool DeleteChannelInfo(int chID, int boardNo);
+
+    /// @brief Insert Temperature test info in database
+    /// @param boardNo
+    /// @param bt board type
+    /// @param nTemperatureTestPoints how many temperature points has been tested
+    /// @param tempEntry channel info entry for temperature point, (only 3 useful information)
+    /// @param valueEntry channel info entry for gain test
+    /// @return
+    int InsertTemperatureTestInfo(int boardNo, SIPMBOARDTYPE bt, int nTemperatureTestPoints, int *tempEntry, int *valueEntry);
+    bool DeleteTemperatureTestInfo(int tempID, int boardNo);
+
+    /// @brief
+    /// @param boardNo
+    /// @param bt
+    /// @param tempTableEntry entry id of temperature test table
+    /// @param biasTableEntry entry id of bias test table
+    /// @param TSlopeEntry entry id of T measure result
+    /// @param BiasSlopeEntry entry id of bias measure result
+    /// @param BDVEntry breakdown voltage measure result
+    /// @param BDTEntry under which temperature BD is measured
+    /// @param TCompFactorEntry compensation result
+    /// @return
+    int InsertSiPMBoardTestInfo(int boardNo, SIPMBOARDTYPE bt, int tempTableEntry, int biasTableEntry, int TSlopeEntry, int BiasSlopeEntry, int BDVEntry, int BDTEntry, int TCompFactorEntry);
+    bool DeleteSiPMBoardTestInfo(int tempID, int boardNo);
+
+    /// @brief Insert entry info into table bias
+    /// @param boardNo
+    /// @param biasSet
+    /// @param biasChEntry
+    /// @return
+    int InsertBiasEntryInfo(int boardNo, int biasSet, int biasChEntry);
+    bool DeleteBiasEntryInfo(int biasID, int boardNo);
+
+    /// @brief Insert entry info into table amp
+    /// @param boardNo
+    /// @param ampSet
+    /// @param hgPedChEntry
+    /// @param hgPedStdChEntry
+    /// @param lgPedChEntry
+    /// @param lgPedStdChEntry
+    /// @param hgCaliChEntry
+    /// @param lgCaliChEntry
+    /// @return
+    int InsertAmpEntryInfo(int boardNo, int ampSet, int hgPedChEntry, int hgPedStdChEntry, int lgPedChEntry, int lgPedStdChEntry, int hgCaliChEntry, int lgCaliChEntry);
+    bool DeleteAmpEntryInfo(int ampID, int boardNo);
+
+    /// @brief Insert amp table
+    /// @param boardNo
+    /// @param ampEntries value array for the channel
+    /// @param validation whether is valid for channel
+    /// @return
+    int InsertAmpTable(int boardNo, int *ampEntries, bool *validation);
+    bool DeleteAmpTable(int ampTableID, int boardNo);
+
+    /// @brief Insert bias table
+    /// @param boardNo
+    /// @param biasEntries
+    /// @param validation
+    /// @return
+    int InsertBiasTableEntry(int boardNo, int *biasEntries, bool *validation);
+    bool DeleteBiasTableEntry(int biasTableID, int boardNo);
+
+    /// @brief 
+    /// @param boardNo 
+    /// @param ampTableEntry 
+    /// @param biasTableEntry 
+    /// @return 
+    int InsertFEEBoardEntry(int boardNo, int ampTableEntry, int biasTableEntry);
+    bool DeleteFEEBoardEntry(int biasTableID, int boardNo);
+
+    void Init(QString sDBName = "CalibrationDB.db");
+
+private:
+    DBManager();
+    ~DBManager();
+
+    bool fInitiated = 0;
+
+    QSqlDatabase fDataBase;
+    QSqlQuery fDBQuery;
+    QProcess fProcess;
+};
+
 class BoardTestResult
 {
 public:
@@ -61,9 +151,15 @@ public:
     bool GenerateFromSource(int board, std::string sDepoPath = "E:\\Data\\~CALI~Calibration-Result\\ProducedForSQLite\\");
     void Dump(std::ostream &os);
 
+    double GetCaliResult(int ch, int ampDAC, GAINTYPE hl);
+    double GetPed(int ch, int ampDAC, GAINTYPE hl);
+    double GetBias(int ch, int biasDAC) { return fBiasTable[biasDAC].vBiasValue[ch]; };
+
+    int WriteIntoDB();
+
 private:
     int fBoardNo;
-    bool fValid = 0;
+    bool fIsValid = 0;
 
     std::string fsDepoPath;
     std::string fsCaliPath;
@@ -73,18 +169,16 @@ private:
     std::map<int, AMPInfo> fAMPTable;
     std::map<int, BiasInfo> fBiasTable;
 
+    int WriteBiasTestEntry();
+    int WriteAmpTestEntry();
+
     void GenerateAMPCali();
     void GeneratePed();
     void GeneratePedDev();
     void GenerateBias();
 };
 
-enum SIPMBOARDTYPE
-{
-    bottom,
-    top
-};
-
+class TGraphErrors;
 class SiPMTestResult
 {
 public:
@@ -97,6 +191,12 @@ public:
     double GetBDVoltageV(int ch) { return fBDVoltage[ch]; };
 
     double GetTCompFactor(int ch) { return fTCompFactor[ch]; };
+    int GetRealChannel(int ch) { return ch + fChannelOffset; };
+    double GetBiasSlope(int ch) { return fBiasSlope[ch]; };
+
+    TGraphErrors *GetTMeasureGraph(TGraphErrors *tge, int ch);
+
+    int WriteIntoDB();
 
 private:
     int fBoardNo;
@@ -119,13 +219,17 @@ private:
     double fTCompFactor[24];   // fit k for T-Bias curve, in Unit of mV/C
 
     int fNbiasSetPoints = 0;
-    int fBiasSet[256];
-    double fValue[24][256]; //  measured Gain,[ch][row]
+    std::map<int, double[24]> fBiasSetMap;
+    // int fBiasSet[256];
+    // double fValue[24][256]; //  measured Gain,[ch][row]
+
+    // Write into Database
+    int WriteTempEntry();
+    int WriteBiasTestEntry();
 
     static std::stringstream gss;
 };
 
 void GenerateDBFromSource();
-
 
 #endif
