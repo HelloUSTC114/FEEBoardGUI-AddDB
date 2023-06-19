@@ -127,6 +127,9 @@ public:
     int ReadBiasTableEntry(int biasTableID, int &boardNo, int *biasEntries, bool *validation);
     bool DeleteBiasTableEntry(int biasTableID, int boardNo);
 
+    int WriteBiasTestEntryIntoDB(const std::map<int, BiasInfo> &mapTable, int boardNo, bool *chValid);
+    bool ReadBiasTestEntryFromDB(int biasTableEntry, std::map<int, BiasInfo> &biasMap);
+
     /// @brief
     /// @param boardNo
     /// @param ampTableEntry
@@ -171,7 +174,9 @@ public:
 private:
     int fBoardNo;
     bool fIsValid = 0;
-
+    bool fGeneratedFromSource = 0;
+    bool fGeneratedFromDB = 0;
+    
     std::string fsDepoPath;
     std::string fsCaliPath;
     std::string fsPedPath;
@@ -182,11 +187,15 @@ private:
 
     int WriteBiasTestEntry();
     int WriteAmpTestEntry();
+    bool ReadBiasTestEntry(int biasTestEntry);
+    bool ReadAmpTestEntry(int ampTestEntry);
 
     void GenerateAMPCali();
     void GeneratePed();
     void GeneratePedDev();
     void GenerateBias();
+
+    void InitBoard(int boardNo, std::string sDepoPath = "E:\\Data\\~CALI~Calibration-Result\\ProducedForSQLite\\");
 };
 
 class TGraphErrors;
@@ -235,7 +244,8 @@ private:
     double fTCompFactor[24];   // fit k for T-Bias curve, in Unit of mV/C
 
     int fNbiasSetPoints = 0;
-    std::map<int, double[24]> fBiasSetMap;
+    // std::map<int, double[24]> fBiasSetMap;
+    std::map<int, BiasInfo> fBiasSetMap;
     // int fBiasSet[256];
     // double fValue[24][256]; //  measured Gain,[ch][row]
 

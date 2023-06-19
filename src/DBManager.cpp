@@ -517,6 +517,70 @@ bool DBManager::DeleteBiasTableEntry(int biasTableID, int boardNo)
     return DeleteFromTable("BIASTABLE", biasTableID, boardNo);
 }
 
+int DBManager::WriteBiasTestEntryIntoDB(const std::map<int, BiasInfo> &mapTable, int boardNo, bool *chValid)
+{
+    int biasKey[256];
+    bool biasValid[256];
+    for (int bias = 0; bias < 256; bias++)
+    {
+        biasValid[bias] = 0;
+    }
+
+    for (auto iter = mapTable.begin(); iter != mapTable.end(); iter++)
+    {
+        double biasMeasValue[32];
+        int biasSet = iter->first;
+        for (int ch = 0; ch < 32; ch++)
+        {
+            biasMeasValue[ch] = iter->second.vBiasValue[ch];
+        }
+        int chKey = InsertChannelInfo(boardNo, biasMeasValue, chValid);
+        biasKey[iter->first] = InsertBiasEntryInfo(boardNo, biasSet, chKey);
+        biasValid[iter->first] = 1;
+    }
+    return InsertBiasTableEntry(boardNo, biasKey, biasValid);
+}
+
+bool DBManager::ReadBiasTestEntryFromDB(int biasTableEntry, std::map<int, BiasInfo> &biasMap)
+{
+    biasMap.clear();
+    int board1;
+    int biasKey[256];
+    bool biasValid[256];
+    int rtn;
+    rtn = ReadBiasTableEntry(biasTableEntry, board1, biasKey, biasValid);
+    if (rtn < 0)
+        return false;
+    for (int bias = 0; bias < 256; bias++)
+    {
+        if (!biasValid[bias])
+            continue;
+        bool chValid[32];
+        double biasMeasValue[32];
+        int biasSet;
+        int biaschKey;
+        ReadBiasEntryInfo(biasKey[bias], board1, biasSet, biaschKey);
+        if (rtn < 0)
+            return false;
+        // Here biasSet, which is read from DB, mush be eqiuvalence with bias
+        if (biasSet != bias)
+        {
+            std::cout << "Fatal error in reading algorithm:" << std::endl;
+            return false;
+        }
+        ReadChannelInfo(biaschKey, board1, biasMeasValue, chValid);
+        if (rtn < 0)
+            return false;
+        for (int ch = 0; ch < 32; ch++)
+        {
+            if (!chValid[ch])
+                continue;
+            biasMap[bias].vBiasValue[ch] = biasMeasValue[ch];
+        }
+    }
+    return true;
+}
+
 int DBManager::InsertFEEBoardEntry(int boardNo, int ampTableEntry, int biasTableEntry)
 {
     // Generate Key
@@ -1048,28 +1112,35 @@ int BoardTestResult::WriteBiasTestEntry()
     if (!fIsValid)
         return -1;
 
-    int biasKey[256];
-    bool biasValid[256];
-    for (int bias = 0; bias < 256; bias++)
+    bool chValid[32];
+    for (int ch = 0; ch < 32; ch++)
     {
-        biasValid[bias] = 0;
+        chValid[ch] = 1;
     }
+    return gDBManager->WriteBiasTestEntryIntoDB(fBiasTable, fBoardNo, chValid);
 
-    for (auto iter = fBiasTable.begin(); iter != fBiasTable.end(); iter++)
-    {
-        bool chValid[32];
-        double biasMeasValue[32];
-        int biasSet = iter->first;
-        for (int ch = 0; ch < 32; ch++)
-        {
-            chValid[ch] = 1;
-            biasMeasValue[ch] = iter->second.vBiasValue[ch];
-        }
-        int chKey = gDBManager->InsertChannelInfo(fBoardNo, biasMeasValue, chValid);
-        biasKey[iter->first] = gDBManager->InsertBiasEntryInfo(fBoardNo, biasSet, chKey);
-        biasValid[iter->first] = 1;
-    }
-    return gDBManager->InsertBiasTableEntry(fBoardNo, biasKey, biasValid);
+    // int biasKey[256];
+    // bool biasValid[256];
+    // for (int bias = 0; bias < 256; bias++)
+    // {
+    //     biasValid[bias] = 0;
+    // }
+
+    // for (auto iter = fBiasTable.begin(); iter != fBiasTable.end(); iter++)
+    // {
+    //     bool chValid[32];
+    //     double biasMeasValue[32];
+    //     int biasSet = iter->first;
+    //     for (int ch = 0; ch < 32; ch++)
+    //     {
+    //         chValid[ch] = 1;
+    //         biasMeasValue[ch] = iter->second.vBiasValue[ch];
+    //     }
+    //     int chKey = gDBManager->InsertChannelInfo(fBoardNo, biasMeasValue, chValid);
+    //     biasKey[iter->first] = gDBManager->InsertBiasEntryInfo(fBoardNo, biasSet, chKey);
+    //     biasValid[iter->first] = 1;
+    // }
+    // return gDBManager->InsertBiasTableEntry(fBoardNo, biasKey, biasValid);
 }
 
 int BoardTestResult::WriteAmpTestEntry()
@@ -1116,6 +1187,109 @@ int BoardTestResult::WriteAmpTestEntry()
         ampValid[iter->first] = 1;
     }
     return gDBManager->InsertAmpTable(fBoardNo, ampKey, ampValid);
+}
+
+bool BoardTestResult::ReadBiasTestEntry(int biasTestEntry)
+{
+    return gDBManager->ReadBiasTestEntryFromDB(biasTestEntry, fBiasTable);
+    // int board1;
+
+    // int biasKey[256];
+    // bool biasValid[256];
+    // int rtn;
+    // rtn = gDBManager->ReadBiasTableEntry(biasTestEntry, board1, biasKey, biasValid);
+    // if (rtn < 0)
+    //     return false;
+    // for (int bias = 0; bias < 256; bias++)
+    // {
+    //     if (!biasValid[bias])
+    //         continue;
+    //     bool chValid[32];
+    //     double biasMeasValue[32];
+    //     int biasSet;
+    //     int biaschKey;
+    //     gDBManager->ReadBiasEntryInfo(biasKey[bias], board1, biasSet, biaschKey);
+    //     if (rtn < 0)
+    //         return false;
+    //     // Here biasSet, which is read from DB, mush be eqiuvalence with bias
+    //     if (biasSet != bias)
+    //     {
+    //         std::cout << "Fatal error in reading algorithm:" << std::endl;
+    //         return false;
+    //     }
+    //     gDBManager->ReadChannelInfo(biaschKey, board1, biasMeasValue, chValid);
+    //     if (rtn < 0)
+    //         return false;
+    //     fBiasTable[bias].biasSet = bias;
+    //     for (int ch = 0; ch < 32; ch++)
+    //     {
+    //         if (!chValid[ch])
+    //             continue;
+    //         fBiasTable[bias].vBiasValue[ch] = biasMeasValue[ch];
+    //     }
+    // }
+    // return true;
+}
+
+bool BoardTestResult::ReadAmpTestEntry(int ampTestEntry)
+{
+    int board1;
+
+    int ampKey[256];
+    bool ampValid[256];
+    int rtn;
+    rtn = gDBManager->ReadAmpTable(ampTestEntry, board1, ampKey, ampValid);
+    if (rtn < 0)
+        return false;
+    for (int amp = 0; amp < 256; amp++)
+    {
+        if (!ampValid[amp])
+            continue;
+        int ampSet;
+        bool chValid[32];
+        double hgPedMean[32];
+        double hgPedStdDev[32];
+        double lgPedMean[32];
+        double lgPedStdDev[32];
+        double hgCali[32];
+        double lgCali[32];
+        int hgPedMeanKey;
+        int hgPedStdDevKey;
+        int lgPedMeanKey;
+        int lgPedStdDevKey;
+        int hgCaliKey;
+        int lgCaliKey;
+        gDBManager->ReadAmpEntryInfo(ampKey[amp], board1, ampSet, hgPedMeanKey, hgPedStdDevKey, lgPedMeanKey, lgPedStdDevKey, hgCaliKey, lgCaliKey);
+        if (rtn < 0)
+            return false;
+        // Here ampSet, which is read from DB, mush be eqiuvalence with amp
+        if (ampSet != amp)
+        {
+            std::cout << "Fatal error in reading algorithm:" << std::endl;
+            return false;
+        }
+        fAMPTable[amp].ampSet = amp;
+        gDBManager->ReadChannelInfo(hgPedMeanKey, board1, hgPedMean, chValid);
+        gDBManager->ReadChannelInfo(hgPedStdDevKey, board1, hgPedStdDev, chValid);
+        gDBManager->ReadChannelInfo(lgPedMeanKey, board1, lgPedMean, chValid);
+        gDBManager->ReadChannelInfo(lgPedStdDevKey, board1, lgPedStdDev, chValid);
+        gDBManager->ReadChannelInfo(hgCaliKey, board1, hgCali, chValid);
+        gDBManager->ReadChannelInfo(lgCaliKey, board1, lgCali, chValid);
+        if (rtn < 0)
+            return false;
+        for (int ch = 0; ch < 32; ch++)
+        {
+            if (!chValid[ch])
+                continue;
+            fAMPTable[amp].hgPedMean[ch] = hgPedMean[ch];
+            fAMPTable[amp].hgPedStdDev[ch] = hgPedStdDev[ch];
+            fAMPTable[amp].lgPedMean[ch] = lgPedMean[ch];
+            fAMPTable[amp].lgPedStdDev[ch] = lgPedStdDev[ch];
+            fAMPTable[amp].hgCali[ch] = hgCali[ch];
+            fAMPTable[amp].lgCali[ch] = lgCali[ch];
+        }
+    }
+    return true;
 }
 
 void BoardTestResult::GenerateAMPCali()
@@ -1291,6 +1465,16 @@ void BoardTestResult::GenerateBias()
     }
 }
 
+void BoardTestResult::InitBoard(int boardNo, std::string sDepoPath)
+{
+    if (fIsValid)
+        return;
+    if (boardNo < 0 || boardNo > 10)
+        return;
+    fsDepoPath = sDepoPath;
+    fBoardNo = boardNo;
+}
+
 bool BoardTestResult::GenerateFromSource(int board, std::string sDepoPath)
 {
     if (fIsValid)
@@ -1305,6 +1489,8 @@ bool BoardTestResult::GenerateFromSource(int board, std::string sDepoPath)
     GeneratePedDev();
     GenerateBias();
     fIsValid = 1;
+    fGeneratedFromSource = 1;
+    fGeneratedFromDB = 0;
     return true;
 }
 
@@ -1372,6 +1558,24 @@ int BoardTestResult::WriteIntoDB()
     auto ampEntry = WriteAmpTestEntry();
     auto biasEntry = WriteBiasTestEntry();
     return gDBManager->InsertFEEBoardEntry(fBoardNo, ampEntry, biasEntry);
+}
+
+bool BoardTestResult::ReadFromDB(int board)
+{
+    if (fIsValid)
+        return false;
+    InitBoard(board);
+    int ampEntry, biasEntry;
+    int rtn = gDBManager->ReadFEEBoardEntry(board, ampEntry, biasEntry);
+    if (rtn < 0)
+        return false;
+    ReadAmpTestEntry(ampEntry);
+    ReadBiasTestEntry(biasEntry);
+
+    fIsValid = 1;
+    fGeneratedFromSource = 0;
+    fGeneratedFromDB = 1;
+    return true;
 }
 
 std::stringstream SiPMTestResult::gss;
@@ -1596,7 +1800,7 @@ bool SiPMTestResult::GenerateFromSiPMTestFile(int board, SIPMBOARDTYPE bt)
             gss >> gainNow;
             gss >> c;
             // fValue[ch][fNbiasSetPoints] = gainNow;
-            fBiasSetMap[biasSetNow][ch] = gainNow;
+            fBiasSetMap[biasSetNow].vBiasValue[ch + fChannelOffset] = gainNow;
         }
         fNbiasSetPoints++;
     }
@@ -1624,14 +1828,6 @@ void SiPMTestResult::Dump(std::ostream &os)
     }
 
     int offset = fChannelOffset;
-    std::for_each(fBiasSetMap.begin(), fBiasSetMap.end(), [offset, &os](std::pair<const int, double[24]> &a)
-                  {
-                    os << a.first << '\t';
-                    for (int ch = 0; ch < 24; ch++)
-                    {
-                      os << "Ch:" << ch + offset << '\t' << a.second[ch] << '\t';
-                    } 
-                    os << std::endl; });
     for (auto iter = fBiasSetMap.begin(); iter != fBiasSetMap.end(); iter++)
     {
         os << iter->first << '\t';
@@ -1639,7 +1835,7 @@ void SiPMTestResult::Dump(std::ostream &os)
         {
             if (ch % 6 != 0)
                 continue;
-            os << "Ch: " << ch + fChannelOffset << '\t' << iter->second[ch] << '\t';
+            os << "Ch: " << ch + fChannelOffset << '\t' << iter->second.vBiasValue[ch + fChannelOffset] << '\t';
         }
         os << std::endl;
     }
@@ -1694,35 +1890,45 @@ int SiPMTestResult::WriteBiasTestEntry()
     if (!fIsValid)
         return -1;
 
-    int biasKey[256];
-    bool biasValid[256];
-    for (int bias = 0; bias < 256; bias++)
+    bool chValid[32];
+    for (int ch = 0; ch < 32; ch++)
     {
-        biasValid[bias] = 0;
-    }
-
-    for (auto iter = fBiasSetMap.begin(); iter != fBiasSetMap.end(); iter++)
-    {
-        bool chValid[32];
-        double biasMeasValue[32];
-        int biasSet = iter->first;
-        for (int ch = 0; ch < 32; ch++)
-        {
-            if (ch < fChannelOffset || ch - fChannelOffset > 23)
-            {
-                chValid[ch] = 0;
-                continue;
-            }
+        if (ch < fChannelOffset || ch - fChannelOffset > 23)
+            chValid[ch] = 0;
+        else
             chValid[ch] = 1;
-            biasMeasValue[ch] = iter->second[ch - fChannelOffset];
-            // if (biasMeasValue[ch - fChannelOffset] == 0 && fBT == top)
-            //     std::cout << fBoardNo << '\t' << fsBT << '\t' << biasSet << '\t' << ch << '\t' << fChannelOffset << std::endl;
-        }
-        int chKey = gDBManager->InsertChannelInfo(fBoardNo, biasMeasValue, chValid);
-        biasKey[iter->first] = gDBManager->InsertBiasEntryInfo(fBoardNo, biasSet, chKey);
-        biasValid[iter->first] = 1;
     }
-    return gDBManager->InsertBiasTableEntry(fBoardNo, biasKey, biasValid);
+    return gDBManager->WriteBiasTestEntryIntoDB(fBiasSetMap, fBoardNo, chValid);
+
+    // int biasKey[256];
+    // bool biasValid[256];
+    // for (int bias = 0; bias < 256; bias++)
+    // {
+    //     biasValid[bias] = 0;
+    // }
+
+    // for (auto iter = fBiasSetMap.begin(); iter != fBiasSetMap.end(); iter++)
+    // {
+    //     bool chValid[32];
+    //     double biasMeasValue[32];
+    //     int biasSet = iter->first;
+    //     for (int ch = 0; ch < 32; ch++)
+    //     {
+    //         if (ch < fChannelOffset || ch - fChannelOffset > 23)
+    //         {
+    //             chValid[ch] = 0;
+    //             continue;
+    //         }
+    //         chValid[ch] = 1;
+    //         biasMeasValue[ch] = iter->second.vBiasValue[ch];
+    //         // if (biasMeasValue[ch - fChannelOffset] == 0 && fBT == top)
+    //         //     std::cout << fBoardNo << '\t' << fsBT << '\t' << biasSet << '\t' << ch << '\t' << fChannelOffset << std::endl;
+    //     }
+    //     int chKey = gDBManager->InsertChannelInfo(fBoardNo, biasMeasValue, chValid);
+    //     biasKey[iter->first] = gDBManager->InsertBiasEntryInfo(fBoardNo, biasSet, chKey);
+    //     biasValid[iter->first] = 1;
+    // }
+    // return gDBManager->InsertBiasTableEntry(fBoardNo, biasKey, biasValid);
 }
 
 bool SiPMTestResult::ReadTempEntry(int tempTableEntry)
@@ -1762,42 +1968,44 @@ bool SiPMTestResult::ReadTempEntry(int tempTableEntry)
 
 bool SiPMTestResult::ReadBiasTestEntry(int biasTableEntry)
 {
-    int board1;
+    return gDBManager->ReadBiasTestEntryFromDB(biasTableEntry, fBiasSetMap);
 
-    int biasKey[256];
-    bool biasValid[256];
-    int rtn;
-    rtn = gDBManager->ReadBiasTableEntry(biasTableEntry, board1, biasKey, biasValid);
-    if (rtn < 0)
-        return false;
-    for (int bias = 0; bias < 256; bias++)
-    {
-        if (!biasValid[bias])
-            continue;
-        bool chValid[32];
-        double biasMeasValue[32];
-        int biasSet;
-        int biaschKey;
-        gDBManager->ReadBiasEntryInfo(biasKey[bias], board1, biasSet, biaschKey);
-        if (rtn < 0)
-            return false;
-        // Here biasSet, which is read from DB, mush be eqiuvalence with bias
-        if (biasSet != bias)
-        {
-            std::cout << "Fatal error in reading algorithm:" << std::endl;
-            return false;
-        }
-        gDBManager->ReadChannelInfo(biaschKey, board1, biasMeasValue, chValid);
-        if (rtn < 0)
-            return false;
-        for (int ch = 0; ch < 32; ch++)
-        {
-            if (!chValid[ch])
-                continue;
-            fBiasSetMap[bias][ch] = biasMeasValue[ch - fChannelOffset];
-        }
-    }
-    return true;
+    // int board1;
+
+    // int biasKey[256];
+    // bool biasValid[256];
+    // int rtn;
+    // rtn = gDBManager->ReadBiasTableEntry(biasTableEntry, board1, biasKey, biasValid);
+    // if (rtn < 0)
+    //     return false;
+    // for (int bias = 0; bias < 256; bias++)
+    // {
+    //     if (!biasValid[bias])
+    //         continue;
+    //     bool chValid[32];
+    //     double biasMeasValue[32];
+    //     int biasSet;
+    //     int biaschKey;
+    //     gDBManager->ReadBiasEntryInfo(biasKey[bias], board1, biasSet, biaschKey);
+    //     if (rtn < 0)
+    //         return false;
+    //     // Here biasSet, which is read from DB, mush be eqiuvalence with bias
+    //     if (biasSet != bias)
+    //     {
+    //         std::cout << "Fatal error in reading algorithm:" << std::endl;
+    //         return false;
+    //     }
+    //     gDBManager->ReadChannelInfo(biaschKey, board1, biasMeasValue, chValid);
+    //     if (rtn < 0)
+    //         return false;
+    //     for (int ch = 0; ch < 32; ch++)
+    //     {
+    //         if (!chValid[ch])
+    //             continue;
+    //         fBiasSetMap[bias].vBiasValue[ch] = biasMeasValue[ch];
+    //     }
+    // }
+    // return true;
 }
 
 void SiPMTestResult::InitBoardNo(int boardNo, SIPMBOARDTYPE bt, std::string spath)
@@ -1826,8 +2034,8 @@ int SiPMTestResult::WriteIntoDB()
 {
     std::cout << "Writing into Database: " << fsBT << "-" << fBoardNo << std::endl;
 
-    int tempTableEntry;
-    int biasTableEntry;
+    int tempTableEntry = -1;
+    int biasTableEntry = -1;
 #if (DATABASE_VERBOSE == 1)
     tempTableEntry = WriteTempEntry();
     biasTableEntry = WriteBiasTestEntry();
