@@ -47,6 +47,18 @@ int main(int argc, char *argv[])
     // SiPMTestResult res;
     // res.GenerateFromSiPMTestFile(1, bottom);
     gDBManager->Init("F:\\Projects\\FEEDistri\\DataBase\\Calibration.db");
+    // int boardNo;
+    // double values[32];
+    // bool valids[32];
+    // gDBManager->ReadChannelInfo(0, boardNo, values, valids);
+    // std::cout << boardNo << std::endl;
+    // for (int ch = 0; ch < 32; ch++)
+    // {
+    //     std::cout << ch << '\t' << valids[ch];
+    //     if (valids[ch])
+    //         std::cout << '\t' << values[ch];
+    //     std::cout << std::endl;
+    // }
     // SiPMTestResult res;
     // res.GenerateFromSiPMTestFile(0, bottom);
     // res.WriteIntoDB();

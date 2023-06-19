@@ -22,6 +22,9 @@
 
 #include "DBManager.h"
 
+#define DATABASE_VERBOSE 0
+// DATABASE_VERBOSE means whether to Generate full database or not, verbose = 0 means generate brief database, while verbose = 1 means generate detail database
+
 DBManager *DBManager::Instance()
 {
     static auto instance = new DBManager();
@@ -75,7 +78,7 @@ bool DBManager::DeleteFromTable(QString sTableName, int ID, int boardNo)
 int DBManager::InsertChannelInfo(int boardNo, double *values, bool *valids)
 {
     // Generate Key
-    static int gPrimaryKey = 0;
+    static int gPrimaryKey = 1;
     int currentKey = gPrimaryKey;
     gPrimaryKey++;
     // Only for debug, delete the entry which has the same key
@@ -108,6 +111,30 @@ int DBManager::InsertChannelInfo(int boardNo, double *values, bool *valids)
     return currentKey;
 }
 
+int DBManager::ReadChannelInfo(int chID, int &boardNo, double *values, bool *valids)
+{
+    QString sSelect = "SELECT * FROM CHANNELSINFO WHERE ID=%1;";
+    sSelect = sSelect.arg(chID);
+    fDBQuery.exec(sSelect);
+    if (!fDBQuery.next())
+    {
+        qDebug() << fDBQuery.lastError();
+        return -1;
+    }
+    boardNo = fDBQuery.value(1).toInt();
+    for (int ch = 0; ch < 32; ch++)
+    {
+        if (fDBQuery.isNull(ch + 2))
+        {
+            valids[ch] = 0;
+            continue;
+        }
+        valids[ch] = 1;
+        values[ch] = fDBQuery.value(ch + 2).toDouble();
+    }
+    return chID;
+}
+
 bool DBManager::DeleteChannelInfo(int chID, int boardNo)
 {
     return DeleteFromTable("CHANNELSINFO", chID, boardNo);
@@ -116,7 +143,7 @@ bool DBManager::DeleteChannelInfo(int chID, int boardNo)
 int DBManager::InsertTemperatureTestInfo(int boardNo, SIPMBOARDTYPE bt, int nTemperatureTestPoints, int *tempEntry, int *valueEntry)
 {
     // Generate Key
-    static int gPrimaryKey = 0;
+    static int gPrimaryKey = 1;
     int currentKey = gPrimaryKey;
     gPrimaryKey++;
     // Only for debug, delete the entry which has the same key
@@ -154,6 +181,27 @@ int DBManager::InsertTemperatureTestInfo(int boardNo, SIPMBOARDTYPE bt, int nTem
     return currentKey;
 }
 
+int DBManager::ReadTemperatureTestInfo(int tempID, int &boardNo, SIPMBOARDTYPE &bt, int &nTemperatureTestPoints, int *tempEntry, int *valueEntry)
+{
+    QString sSelect = "SELECT * FROM TEMPERATURETESTTABLE WHERE ID=%1;";
+    sSelect = sSelect.arg(tempID);
+    fDBQuery.exec(sSelect);
+    if (!fDBQuery.next())
+    {
+        qDebug() << fDBQuery.lastError();
+        return -1;
+    }
+    boardNo = fDBQuery.value(1).toInt();
+    bt = (SIPMBOARDTYPE)fDBQuery.value(2).toInt();
+    nTemperatureTestPoints = fDBQuery.value(3).toInt();
+    for (int point = 0; point < nTemperatureTestPoints; point++)
+    {
+        tempEntry[point] = fDBQuery.value(point * 2 + 4).toDouble();
+        valueEntry[point] = fDBQuery.value(point * 2 + 5).toDouble();
+    }
+    return tempID;
+}
+
 bool DBManager::DeleteTemperatureTestInfo(int tempID, int boardNo)
 {
     return DeleteFromTable("TEMPERATURETESTTABLE", tempID, boardNo);
@@ -162,7 +210,7 @@ bool DBManager::DeleteTemperatureTestInfo(int tempID, int boardNo)
 int DBManager::InsertSiPMBoardTestInfo(int boardNo, SIPMBOARDTYPE bt, int tempTableEntry, int biasTableEntry, int TSlopeEntry, int BiasSlopeEntry, int BDVEntry, int BDTEntry, int TCompFactorEntry)
 {
     // Generate Key
-    static int gPrimaryKey = 0;
+    static int gPrimaryKey = 1;
     int currentKey = gPrimaryKey;
     gPrimaryKey++;
     // Only for debug, delete the entry which has the same key
@@ -181,6 +229,12 @@ int DBManager::InsertSiPMBoardTestInfo(int boardNo, SIPMBOARDTYPE bt, int tempTa
     fDBQuery.bindValue(7, BDVEntry);
     fDBQuery.bindValue(8, BDTEntry);
     fDBQuery.bindValue(9, TCompFactorEntry);
+
+#if (DATABASE_VERBOSE == 0)
+    fDBQuery.bindValue(3, QVariant::QVariant());
+    fDBQuery.bindValue(4, QVariant::QVariant());
+#endif
+
     if (!fDBQuery.exec())
     {
         qDebug() << fDBQuery.lastError();
@@ -188,6 +242,45 @@ int DBManager::InsertSiPMBoardTestInfo(int boardNo, SIPMBOARDTYPE bt, int tempTa
     // std::cout << sInsert.toStdString() << std::endl;
     // fDBQuery.prepare()
     return currentKey;
+}
+
+int DBManager::ReadSiPMBoardTestInfo(int boardID, int &boardNo, SIPMBOARDTYPE &bt, int &tempTableEntry, int &biasTableEntry, int &TSlopeEntry, int &BiasSlopeEntry, int &BDVEntry, int &BDTEntry, int &TCompFactorEntry)
+{
+    QString sSelect = "SELECT * FROM SIPMBOARD WHERE ID=%1;";
+    sSelect = sSelect.arg(boardID);
+    fDBQuery.exec(sSelect);
+    if (!fDBQuery.next())
+    {
+        qDebug() << fDBQuery.lastError();
+        return -1;
+    }
+    boardNo = fDBQuery.value(1).toInt();
+    bt = (SIPMBOARDTYPE)fDBQuery.value(2).toInt();
+    tempTableEntry = fDBQuery.value(3).toInt();
+    biasTableEntry = fDBQuery.value(4).toInt();
+    TSlopeEntry = fDBQuery.value(5).toInt();
+    BiasSlopeEntry = fDBQuery.value(6).toInt();
+    BDVEntry = fDBQuery.value(7).toInt();
+    BDTEntry = fDBQuery.value(8).toInt();
+    TCompFactorEntry = fDBQuery.value(9).toInt();
+    return boardID;
+}
+
+int DBManager::ReadSiPMBoardTestInfo(int boardNo, SIPMBOARDTYPE bt, int &tempTableEntry, int &biasTableEntry, int &TSlopeEntry, int &BiasSlopeEntry, int &BDVEntry, int &BDTEntry, int &TCompFactorEntry)
+{
+    QString sSelect = "SELECT ID FROM SIPMBOARD WHERE (BoardNo = %1 AND BT = %2);";
+    sSelect = sSelect.arg(boardNo).arg(bt);
+    fDBQuery.exec(sSelect);
+    if (!fDBQuery.next())
+    {
+        qDebug() << fDBQuery.lastError();
+        return -1;
+    }
+    int boardID = fDBQuery.value(0).toInt();
+    int boardNo1;
+    SIPMBOARDTYPE bt1;
+    auto rtn = ReadSiPMBoardTestInfo(boardID, boardNo1, bt1, tempTableEntry, biasTableEntry, TSlopeEntry, BiasSlopeEntry, BDVEntry, BDTEntry, TCompFactorEntry);
+    return rtn;
 }
 
 bool DBManager::DeleteSiPMBoardTestInfo(int tempID, int boardNo)
@@ -198,7 +291,7 @@ bool DBManager::DeleteSiPMBoardTestInfo(int tempID, int boardNo)
 int DBManager::InsertBiasEntryInfo(int boardNo, int biasSet, int biasChEntry)
 {
     // Generate Key
-    static int gPrimaryKey = 0;
+    static int gPrimaryKey = 1;
     int currentKey = gPrimaryKey;
     gPrimaryKey++;
     // Only for debug, delete the entry which has the same key
@@ -217,6 +310,22 @@ int DBManager::InsertBiasEntryInfo(int boardNo, int biasSet, int biasChEntry)
     return currentKey;
 }
 
+int DBManager::ReadBiasEntryInfo(int biasID, int &boardNo, int &biasSet, int &biasChEntry)
+{
+    QString sSelect = "SELECT * FROM BIASINFO WHERE ID=%1;";
+    sSelect = sSelect.arg(biasID);
+    fDBQuery.exec(sSelect);
+    if (!fDBQuery.next())
+    {
+        qDebug() << fDBQuery.lastError();
+        return -1;
+    }
+    boardNo = fDBQuery.value(1).toInt();
+    biasSet = fDBQuery.value(2).toInt();
+    biasChEntry = fDBQuery.value(3).toInt();
+    return biasID;
+}
+
 bool DBManager::DeleteBiasEntryInfo(int biasID, int boardNo)
 {
     return DeleteFromTable("BIASINFO", biasID, boardNo);
@@ -225,7 +334,7 @@ bool DBManager::DeleteBiasEntryInfo(int biasID, int boardNo)
 int DBManager::InsertAmpEntryInfo(int boardNo, int ampSet, int hgPedChEntry, int hgPedStdChEntry, int lgPedChEntry, int lgPedStdChEntry, int hgCaliChEntry, int lgCaliChEntry)
 {
     // Generate Key
-    static int gPrimaryKey = 0;
+    static int gPrimaryKey = 1;
     int currentKey = gPrimaryKey;
     gPrimaryKey++;
     // Only for debug, delete the entry which has the same key
@@ -249,6 +358,27 @@ int DBManager::InsertAmpEntryInfo(int boardNo, int ampSet, int hgPedChEntry, int
     return currentKey;
 }
 
+int DBManager::ReadAmpEntryInfo(int ampID, int &boardNo, int &ampSet, int &hgPedChEntry, int &hgPedStdChEntry, int &lgPedChEntry, int &lgPedStdChEntry, int &hgCaliChEntry, int &lgCaliChEntry)
+{
+    QString sSelect = "SELECT * FROM AMPINFO WHERE ID=%1;";
+    sSelect = sSelect.arg(ampID);
+    fDBQuery.exec(sSelect);
+    if (!fDBQuery.next())
+    {
+        qDebug() << fDBQuery.lastError();
+        return -1;
+    }
+    boardNo = fDBQuery.value(1).toInt();
+    ampSet = fDBQuery.value(2).toInt();
+    hgPedChEntry = fDBQuery.value(3).toInt();
+    hgPedStdChEntry = fDBQuery.value(4).toInt();
+    lgPedChEntry = fDBQuery.value(5).toInt();
+    lgPedStdChEntry = fDBQuery.value(6).toInt();
+    hgCaliChEntry = fDBQuery.value(7).toInt();
+    lgCaliChEntry = fDBQuery.value(8).toInt();
+    return ampID;
+}
+
 bool DBManager::DeleteAmpEntryInfo(int ampID, int boardNo)
 {
     return DeleteFromTable("AMPINFO", ampID, boardNo);
@@ -257,7 +387,7 @@ bool DBManager::DeleteAmpEntryInfo(int ampID, int boardNo)
 int DBManager::InsertAmpTable(int boardNo, int *ampEntries, bool *validation)
 {
     // Generate Key
-    static int gPrimaryKey = 0;
+    static int gPrimaryKey = 1;
     int currentKey = gPrimaryKey;
     gPrimaryKey++;
     // Only for debug, delete the entry which has the same key
@@ -286,6 +416,31 @@ int DBManager::InsertAmpTable(int boardNo, int *ampEntries, bool *validation)
     return currentKey;
 }
 
+int DBManager::ReadAmpTable(int ampTableID, int &boardNo, int *ampEntries, bool *validation)
+{
+    QString sSelect = "SELECT * FROM AMPTABLE WHERE ID=%1;";
+    sSelect = sSelect.arg(ampTableID);
+    fDBQuery.exec(sSelect);
+    if (!fDBQuery.next())
+    {
+        qDebug() << fDBQuery.lastError();
+        return -1;
+    }
+    boardNo = fDBQuery.value(1).toInt();
+    for (int amp = 0; amp < 63; amp++)
+    {
+        if (fDBQuery.isNull(amp + 2))
+        {
+            validation[amp] = 0;
+            ampEntries[amp] = -1;
+            continue;
+        }
+        validation[amp] = 1;
+        ampEntries[amp] = fDBQuery.value(amp + 2).toInt();
+    }
+    return ampTableID;
+}
+
 bool DBManager::DeleteAmpTable(int ampTableID, int boardNo)
 {
     return DeleteFromTable("AMPTABLE", ampTableID, boardNo);
@@ -303,7 +458,7 @@ DBManager::~DBManager()
 int DBManager::InsertBiasTableEntry(int boardNo, int *biasEntries, bool *validation)
 {
     // Generate Key
-    static int gPrimaryKey = 0;
+    static int gPrimaryKey = 1;
     int currentKey = gPrimaryKey;
     gPrimaryKey++;
     // Only for debug, delete the entry which has the same key
@@ -332,6 +487,31 @@ int DBManager::InsertBiasTableEntry(int boardNo, int *biasEntries, bool *validat
     return currentKey;
 }
 
+int DBManager::ReadBiasTableEntry(int biasTableID, int &boardNo, int *biasEntries, bool *validation)
+{
+    QString sSelect = "SELECT * FROM BIASTABLE WHERE ID=%1;";
+    sSelect = sSelect.arg(biasTableID);
+    fDBQuery.exec(sSelect);
+    if (!fDBQuery.next())
+    {
+        qDebug() << fDBQuery.lastError();
+        return -1;
+    }
+    boardNo = fDBQuery.value(1).toInt();
+    for (int bias = 0; bias < 256; bias++)
+    {
+        if (fDBQuery.isNull(bias + 2))
+        {
+            validation[bias] = 0;
+            biasEntries[bias] = -1;
+            continue;
+        }
+        validation[bias] = 1;
+        biasEntries[bias] = fDBQuery.value(bias + 2).toInt();
+    }
+    return biasTableID;
+}
+
 bool DBManager::DeleteBiasTableEntry(int biasTableID, int boardNo)
 {
     return DeleteFromTable("BIASTABLE", biasTableID, boardNo);
@@ -340,7 +520,7 @@ bool DBManager::DeleteBiasTableEntry(int biasTableID, int boardNo)
 int DBManager::InsertFEEBoardEntry(int boardNo, int ampTableEntry, int biasTableEntry)
 {
     // Generate Key
-    static int gPrimaryKey = 0;
+    static int gPrimaryKey = 1;
     int currentKey = gPrimaryKey;
     gPrimaryKey++;
     // Only for debug, delete the entry which has the same key
@@ -359,9 +539,41 @@ int DBManager::InsertFEEBoardEntry(int boardNo, int ampTableEntry, int biasTable
     return currentKey;
 }
 
-bool DBManager::DeleteFEEBoardEntry(int biasTableID, int boardNo)
+int DBManager::ReadFEEBoardEntry(int feeBoardID, int &boardNo, int &ampTableEntry, int &biasTableEntry)
 {
-    return DeleteFromTable("FEEBOARD", biasTableID, boardNo);
+    QString sSelect = "SELECT * FROM AMPINFO WHERE ID=%1;";
+    sSelect = sSelect.arg(feeBoardID);
+    fDBQuery.exec(sSelect);
+    if (!fDBQuery.next())
+    {
+        qDebug() << fDBQuery.lastError();
+        return -1;
+    }
+    boardNo = fDBQuery.value(1).toInt();
+    ampTableEntry = fDBQuery.value(2).toInt();
+    biasTableEntry = fDBQuery.value(3).toInt();
+    return feeBoardID;
+}
+
+int DBManager::ReadFEEBoardEntry(int boardNo, int &ampTableEntry, int &biasTableEntry)
+{
+    QString sSelect = "SELECT ID FROM SIPMBOARD WHERE (BoardNo = %1 AND BT = %2);";
+    sSelect = sSelect.arg(boardNo);
+    fDBQuery.exec(sSelect);
+    if (!fDBQuery.next())
+    {
+        qDebug() << fDBQuery.lastError();
+        return -1;
+    }
+    int boardID = fDBQuery.value(0).toInt();
+    int boardNo1;
+    auto rtn = ReadFEEBoardEntry(boardID, boardNo1, ampTableEntry, biasTableEntry);
+    return rtn;
+}
+
+bool DBManager::DeleteFEEBoardEntry(int feeBoardID, int boardNo)
+{
+    return DeleteFromTable("FEEBOARD", feeBoardID, boardNo);
 }
 
 void DBManager::Init(QString sDBName)
@@ -631,7 +843,6 @@ bool BoardTestResult::ReadPedMeanFile(int board, GAINTYPE hl)
     auto file = new TFile(sWName.c_str(), "recreate");
     TGraph *tg[32];
     TMultiGraph mg;
-    int pointCounter[32];
     mg.SetTitle(Form("board%d-%s;Amp Set DAC;Pedestal value", board, sHL.c_str()));
 
     for (int ch = 0; ch < 32; ch++)
@@ -686,7 +897,6 @@ bool ReadBoard0BiasDACTestFile(double *vBiasSet, double **vchValue, int &NRow)
     {
         int biasSet;
         double value;
-        char c;
 
         std::string sLine;
         std::getline(fin, sLine);
@@ -1170,21 +1380,23 @@ bool SiPMTestResult::GenerateFromSiPMTestFile(int board, SIPMBOARDTYPE bt)
     if (fIsValid)
         return false;
 
-    fBoardNo = board;
-    fBT = bt;
+    InitBoardNo(board, bt);
 
-    fsPath = "E:\\Data\\~CALI~Calibration-Result\\ProducedForSQLite\\~SiPM~SiPMTest\\2\\";
-    if (bt == bottom)
-    {
-        fsBT = "bottom";
-        fChannelOffset = 0;
-    }
-    else
-    {
-        fsBT = "top";
-        fChannelOffset = 8;
-    }
-    fsFileName = fsBT + std::to_string(board) + "SiPMTest.csv";
+    // fBoardNo = board;
+    // fBT = bt;
+
+    // fsPath = "E:\\Data\\~CALI~Calibration-Result\\ProducedForSQLite\\~SiPM~SiPMTest\\3\\";
+    // if (bt == bottom)
+    // {
+    //     fsBT = "bottom";
+    //     fChannelOffset = 0;
+    // }
+    // else
+    // {
+    //     fsBT = "top";
+    //     fChannelOffset = 8;
+    // }
+    // fsFileName = fsBT + std::to_string(board) + "SiPMTest.csv";
 
     std::ifstream fin(fsPath + fsFileName);
     std::cout << "Opening: " << fsPath + fsFileName << '\t' << fin.is_open() << std::endl;
@@ -1390,6 +1602,8 @@ bool SiPMTestResult::GenerateFromSiPMTestFile(int board, SIPMBOARDTYPE bt)
     }
     fIsValid = 1;
     fin.close();
+    fGeneratedFromDB = 0;
+    fGeneratedFromSource = 1;
 
     return true;
 }
@@ -1433,6 +1647,8 @@ void SiPMTestResult::Dump(std::ostream &os)
 
 TGraphErrors *SiPMTestResult::GetTMeasureGraph(TGraphErrors *tge, int ch)
 {
+    if (!IsDetailed())
+        return NULL;
     tge->Set(0);
     for (int i = 0; i < fNTMeasPoints; i++)
     {
@@ -1509,11 +1725,113 @@ int SiPMTestResult::WriteBiasTestEntry()
     return gDBManager->InsertBiasTableEntry(fBoardNo, biasKey, biasValid);
 }
 
+bool SiPMTestResult::ReadTempEntry(int tempTableEntry)
+{
+    int board1;
+    SIPMBOARDTYPE bt1;
+
+    int TKey[10];
+    int TResultKey[10];
+
+    double TMeas[32];
+    double TMeasResult[32];
+    bool chValid[32];
+    auto rtn = gDBManager->ReadTemperatureTestInfo(tempTableEntry, board1, bt1, fNTMeasPoints, TKey, TResultKey);
+    if (rtn < 0)
+        return false;
+
+    for (int point = 0; point < fNTMeasPoints; point++)
+    {
+        rtn = gDBManager->ReadChannelInfo(TKey[point], board1, TMeas, chValid);
+        if (rtn < 0)
+            return false;
+        rtn = gDBManager->ReadChannelInfo(TResultKey[point], board1, TMeasResult, chValid);
+        if (rtn < 0)
+            return false;
+        for (int ch = 0; ch < 32; ch++)
+        {
+            if (!chValid[ch])
+                continue;
+            fTMeas[(ch - fChannelOffset) / 8][point];
+            fTMeasResult[(ch - fChannelOffset) / 8][(ch - fChannelOffset) % 8][point] = TMeasResult[ch];
+        }
+    }
+
+    return true;
+}
+
+bool SiPMTestResult::ReadBiasTestEntry(int biasTableEntry)
+{
+    int board1;
+
+    int biasKey[256];
+    bool biasValid[256];
+    int rtn;
+    rtn = gDBManager->ReadBiasTableEntry(biasTableEntry, board1, biasKey, biasValid);
+    if (rtn < 0)
+        return false;
+    for (int bias = 0; bias < 256; bias++)
+    {
+        if (!biasValid[bias])
+            continue;
+        bool chValid[32];
+        double biasMeasValue[32];
+        int biasSet;
+        int biaschKey;
+        gDBManager->ReadBiasEntryInfo(biasKey[bias], board1, biasSet, biaschKey);
+        if (rtn < 0)
+            return false;
+        // Here biasSet, which is read from DB, mush be eqiuvalence with bias
+        if (biasSet != bias)
+        {
+            std::cout << "Fatal error in reading algorithm:" << std::endl;
+            return false;
+        }
+        gDBManager->ReadChannelInfo(biaschKey, board1, biasMeasValue, chValid);
+        if (rtn < 0)
+            return false;
+        for (int ch = 0; ch < 32; ch++)
+        {
+            if (!chValid[ch])
+                continue;
+            fBiasSetMap[bias][ch] = biasMeasValue[ch - fChannelOffset];
+        }
+    }
+    return true;
+}
+
+void SiPMTestResult::InitBoardNo(int boardNo, SIPMBOARDTYPE bt, std::string spath)
+{
+    if (fIsValid)
+        return;
+
+    fBoardNo = boardNo;
+    fBT = bt;
+
+    fsPath = spath;
+    if (bt == bottom)
+    {
+        fsBT = "bottom";
+        fChannelOffset = 0;
+    }
+    else
+    {
+        fsBT = "top";
+        fChannelOffset = 8;
+    }
+    fsFileName = fsBT + std::to_string(boardNo) + "SiPMTest.csv";
+}
+
 int SiPMTestResult::WriteIntoDB()
 {
     std::cout << "Writing into Database: " << fsBT << "-" << fBoardNo << std::endl;
-    int tempTableEntry = WriteTempEntry();
-    int biasTableEntry = WriteBiasTestEntry();
+
+    int tempTableEntry;
+    int biasTableEntry;
+#if (DATABASE_VERBOSE == 1)
+    tempTableEntry = WriteTempEntry();
+    biasTableEntry = WriteBiasTestEntry();
+#endif
 
     bool chValid[32];
     double TSlope[32];
@@ -1544,6 +1862,61 @@ int SiPMTestResult::WriteIntoDB()
     return gDBManager->InsertSiPMBoardTestInfo(fBoardNo, fBT, tempTableEntry, biasTableEntry, TSlopeEntry, BiasSlopeEntry, BDVEntry, BDTEntry, TCompFactorEntry);
 }
 
+bool SiPMTestResult::ReadFromDB(int board, SIPMBOARDTYPE bt)
+{
+    if (!gDBManager->IsInitiated())
+        return false;
+    if (fIsValid)
+        return false;
+    InitBoardNo(board, bt);
+
+    int tempTableEntry, biasTableEntry, TSlopeEntry, BiasSlopeEntry, BDVEntry, BDTEntry, TCompFactorEntry;
+    auto rtn = gDBManager->ReadSiPMBoardTestInfo(board, bt, tempTableEntry, biasTableEntry, TSlopeEntry, BiasSlopeEntry, BDVEntry, BDTEntry, TCompFactorEntry);
+    if (rtn < 0)
+        return false;
+
+    fBoardNo = board;
+    fBT = bt;
+    int board1;
+
+    bool chValid[32];
+    double TSlope[32];
+    double BiasSlope[32];
+    double BDV[32];
+    double BDT[32];
+    double TCompFactor[32];
+    gDBManager->ReadChannelInfo(TSlopeEntry, board1, TSlope, chValid);
+    gDBManager->ReadChannelInfo(BiasSlopeEntry, board1, BiasSlope, chValid);
+    gDBManager->ReadChannelInfo(BDVEntry, board1, BDV, chValid);
+    gDBManager->ReadChannelInfo(BDTEntry, board1, BDT, chValid);
+    gDBManager->ReadChannelInfo(TCompFactorEntry, board1, TCompFactor, chValid);
+
+    //! TODO: write from these arrays to inside arrays
+    for (int ch = 0; ch < 32; ch++)
+    {
+        if (!chValid[ch])
+            continue;
+        fTSlope[ch - fChannelOffset] = TSlope[ch];
+        fBiasSlope[ch - fChannelOffset] = BiasSlope[ch];
+        fBDVoltage[ch - fChannelOffset] = BDV[ch];
+        fBDTemperature[ch - fChannelOffset] = BDT[ch];
+        fTCompFactor[ch - fChannelOffset] = TCompFactor[ch];
+    }
+
+    fIsValid = true;
+    fGeneratedFromDB = 1;
+    fGeneratedFromSource = 0;
+    fDBIsDetailed = 0;
+
+#if (DATABASE_VERBOSE == 1)
+    ReadBiasTestEntry(biasTableEntry);
+    ReadTempEntry(tempTableEntry);
+    fDBIsDetailed = 1;
+#endif
+
+    return true;
+}
+
 // #define ANALYZE_DATA 1
 
 void GenerateDBFromSource()
@@ -1556,21 +1929,28 @@ void GenerateDBFromSource()
     {
         vSiPMBottom[i] = new SiPMTestResult;
         vSiPMBottom[i]->GenerateFromSiPMTestFile(i, bottom);
+#ifndef ANALYZE_DATA
         vSiPMBottom[i]->WriteIntoDB();
-
+#endif
         vSiPMTop[i] = new SiPMTestResult;
         vSiPMTop[i]->GenerateFromSiPMTestFile(i, top);
+#ifndef ANALYZE_DATA
         vSiPMTop[i]->WriteIntoDB();
+#endif
     }
 
     for (int i = 0; i < 11; i++)
     {
         vFEE[i] = new BoardTestResult;
         vFEE[i]->GenerateFromSource(i);
+#ifndef ANALYZE_DATA
         vFEE[i]->WriteIntoDB();
+#endif
     }
 
 #ifdef ANALYZE_DATA
+    std::vector<std::pair<int, int>> mapTop;
+    std::vector<std::pair<int, int>> mapBottom;
     gStyle->SetOptFit(111);
     auto f = new TF1("f", "pol1", 0, 60);
     auto c = new TCanvas("c", "c", 1);
@@ -1624,6 +2004,9 @@ void GenerateDBFromSource()
             auto chi2 = f->GetChisquare();
             if (chi2 < 50)
                 hCompFactor->Fill(vSiPMBottom[board]->GetTCompFactor(ch));
+            double factor = vSiPMBottom[board]->GetTCompFactor(ch);
+            if (factor < 50 || factor > 60)
+                mapBottom.push_back(std::pair<int, int>(board, ch));
 
             tg = vSiPMTop[board]->GetTMeasureGraph(tg, ch);
             tg->SetTitle(Form("board-%d-top-ch%d;T/^{#circ}C;ADCValue", board, vSiPMTop[board]->GetRealChannel(ch)));
@@ -1634,7 +2017,24 @@ void GenerateDBFromSource()
             chi2 = f->GetChisquare();
             if (chi2 < 50)
                 hCompFactor->Fill(vSiPMTop[board]->GetTCompFactor(ch));
+
+            factor = vSiPMTop[board]->GetTCompFactor(ch);
+            if (factor < 50 || factor > 60)
+                mapTop.push_back(std::pair<int, int>(board, ch));
         }
+    }
+
+    for (auto iter = mapTop.begin(); iter != mapTop.end(); iter++)
+    {
+        int board = iter->first;
+        int channel = iter->second;
+        std::cout << "Top: " << board << '\t' << channel << '\t' << vSiPMTop[board]->GetTCompFactor(channel) << '\t' << vSiPMTop[board]->GetBiasSlope(channel) << '\t' << vSiPMTop[board]->GetTSlope(channel) << std::endl;
+    }
+    for (auto iter = mapBottom.begin(); iter != mapBottom.end(); iter++)
+    {
+        int board = iter->first;
+        int channel = iter->second;
+        std::cout << "Bottom: " << board << '\t' << channel << '\t' << vSiPMBottom[board]->GetTCompFactor(channel) << '\t' << vSiPMBottom[board]->GetBiasSlope(channel) << '\t' << vSiPMBottom[board]->GetTSlope(channel) << std::endl;
     }
 
     for (int board = 0; board < 11; board++)

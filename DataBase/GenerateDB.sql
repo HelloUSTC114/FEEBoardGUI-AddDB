@@ -400,9 +400,9 @@ CREATE TABLE SIPMBOARD(
         AND BT <= 1
     ),
     -- Temperature table Entry
-    TemperatureTestGainEntry INT NOT NULL UNIQUE,
+    TemperatureTestGainEntry INT UNIQUE,
     -- Bias Table Entry
-    BiasTestResultEntry INT NOT NULL UNIQUE,
+    BiasTestResultEntry INT UNIQUE,
     -- Channel Entry
     TSlopeEntry INT NOT NULL UNIQUE,
     BiasSlopeEntry INT NOT NULL UNIQUE,

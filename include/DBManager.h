@@ -56,6 +56,7 @@ public:
     /// @param valids whether this channel is valid
     /// @return ID for the channel info
     int InsertChannelInfo(int boardNo, double *values, bool *valids);
+    int ReadChannelInfo(int chID, int &boardNo, double *values, bool *valids);
     bool DeleteChannelInfo(int chID, int boardNo);
 
     /// @brief Insert Temperature test info in database
@@ -66,6 +67,7 @@ public:
     /// @param valueEntry channel info entry for gain test
     /// @return
     int InsertTemperatureTestInfo(int boardNo, SIPMBOARDTYPE bt, int nTemperatureTestPoints, int *tempEntry, int *valueEntry);
+    int ReadTemperatureTestInfo(int tempID, int &boardNo, SIPMBOARDTYPE &bt, int &nTemperatureTestPoints, int *tempEntry, int *valueEntry);
     bool DeleteTemperatureTestInfo(int tempID, int boardNo);
 
     /// @brief
@@ -80,7 +82,9 @@ public:
     /// @param TCompFactorEntry compensation result
     /// @return
     int InsertSiPMBoardTestInfo(int boardNo, SIPMBOARDTYPE bt, int tempTableEntry, int biasTableEntry, int TSlopeEntry, int BiasSlopeEntry, int BDVEntry, int BDTEntry, int TCompFactorEntry);
-    bool DeleteSiPMBoardTestInfo(int tempID, int boardNo);
+    int ReadSiPMBoardTestInfo(int boardID, int &boardNo, SIPMBOARDTYPE &bt, int &tempTableEntry, int &biasTableEntry, int &TSlopeEntry, int &BiasSlopeEntry, int &BDVEntry, int &BDTEntry, int &TCompFactorEntry);
+    int ReadSiPMBoardTestInfo(int boardNo, SIPMBOARDTYPE bt, int &tempTableEntry, int &biasTableEntry, int &TSlopeEntry, int &BiasSlopeEntry, int &BDVEntry, int &BDTEntry, int &TCompFactorEntry); // Read through board number and board type
+    bool DeleteSiPMBoardTestInfo(int boardID, int boardNo);
 
     /// @brief Insert entry info into table bias
     /// @param boardNo
@@ -88,6 +92,7 @@ public:
     /// @param biasChEntry
     /// @return
     int InsertBiasEntryInfo(int boardNo, int biasSet, int biasChEntry);
+    int ReadBiasEntryInfo(int biasID, int &boardNo, int &biasSet, int &biasChEntry);
     bool DeleteBiasEntryInfo(int biasID, int boardNo);
 
     /// @brief Insert entry info into table amp
@@ -101,6 +106,7 @@ public:
     /// @param lgCaliChEntry
     /// @return
     int InsertAmpEntryInfo(int boardNo, int ampSet, int hgPedChEntry, int hgPedStdChEntry, int lgPedChEntry, int lgPedStdChEntry, int hgCaliChEntry, int lgCaliChEntry);
+    int ReadAmpEntryInfo(int ampID, int &boardNo, int &ampSet, int &hgPedChEntry, int &hgPedStdChEntry, int &lgPedChEntry, int &lgPedStdChEntry, int &hgCaliChEntry, int &lgCaliChEntry);
     bool DeleteAmpEntryInfo(int ampID, int boardNo);
 
     /// @brief Insert amp table
@@ -109,6 +115,7 @@ public:
     /// @param validation whether is valid for channel
     /// @return
     int InsertAmpTable(int boardNo, int *ampEntries, bool *validation);
+    int ReadAmpTable(int ampTableID, int &boardNo, int *ampEntries, bool *validation);
     bool DeleteAmpTable(int ampTableID, int boardNo);
 
     /// @brief Insert bias table
@@ -117,17 +124,21 @@ public:
     /// @param validation
     /// @return
     int InsertBiasTableEntry(int boardNo, int *biasEntries, bool *validation);
+    int ReadBiasTableEntry(int biasTableID, int &boardNo, int *biasEntries, bool *validation);
     bool DeleteBiasTableEntry(int biasTableID, int boardNo);
 
-    /// @brief 
-    /// @param boardNo 
-    /// @param ampTableEntry 
-    /// @param biasTableEntry 
-    /// @return 
+    /// @brief
+    /// @param boardNo
+    /// @param ampTableEntry
+    /// @param biasTableEntry
+    /// @return
     int InsertFEEBoardEntry(int boardNo, int ampTableEntry, int biasTableEntry);
-    bool DeleteFEEBoardEntry(int biasTableID, int boardNo);
+    int ReadFEEBoardEntry(int feeBoardID, int &boardNo, int &ampTableEntry, int &biasTableEntry);
+    int ReadFEEBoardEntry(int boardNo, int &ampTableEntry, int &biasTableEntry); // Read through board number
+    bool DeleteFEEBoardEntry(int feeBoardID, int boardNo);
 
     void Init(QString sDBName = "CalibrationDB.db");
+    bool IsInitiated() { return fInitiated; }
 
 private:
     DBManager();
@@ -149,13 +160,13 @@ public:
     static bool ReadBiasDACTestFile(int board);
 
     bool GenerateFromSource(int board, std::string sDepoPath = "E:\\Data\\~CALI~Calibration-Result\\ProducedForSQLite\\");
+    int WriteIntoDB();
+    bool ReadFromDB(int board);
     void Dump(std::ostream &os);
 
     double GetCaliResult(int ch, int ampDAC, GAINTYPE hl);
     double GetPed(int ch, int ampDAC, GAINTYPE hl);
     double GetBias(int ch, int biasDAC) { return fBiasTable[biasDAC].vBiasValue[ch]; };
-
-    int WriteIntoDB();
 
 private:
     int fBoardNo;
@@ -183,6 +194,9 @@ class SiPMTestResult
 {
 public:
     bool GenerateFromSiPMTestFile(int board, SIPMBOARDTYPE bt);
+    int WriteIntoDB();
+    bool ReadFromDB(int board, SIPMBOARDTYPE bt);
+    bool IsDetailed() { return fGeneratedFromSource || fDBIsDetailed; }
     void Dump(std::ostream &os);
 
     double *GetBDVoltageT() { return fBDTemperature; };
@@ -192,17 +206,19 @@ public:
 
     double GetTCompFactor(int ch) { return fTCompFactor[ch]; };
     int GetRealChannel(int ch) { return ch + fChannelOffset; };
+    double GetTSlope(int ch) { return fTSlope[ch]; };
     double GetBiasSlope(int ch) { return fBiasSlope[ch]; };
 
     TGraphErrors *GetTMeasureGraph(TGraphErrors *tge, int ch);
-
-    int WriteIntoDB();
 
 private:
     int fBoardNo;
     SIPMBOARDTYPE fBT;
     bool fIsValid = 0;
     int fChannelOffset = 0;
+    bool fGeneratedFromSource = 0;
+    bool fGeneratedFromDB = 0;
+    bool fDBIsDetailed = 0;
 
     std::string fsPath;
     std::string fsFileName;
@@ -226,6 +242,10 @@ private:
     // Write into Database
     int WriteTempEntry();
     int WriteBiasTestEntry();
+    bool ReadTempEntry(int tempTableEntry);
+    bool ReadBiasTestEntry(int biasTableEntry);
+
+    void InitBoardNo(int boardNo, SIPMBOARDTYPE bt, std::string spath = "E:\\Data\\~CALI~Calibration-Result\\ProducedForSQLite\\~SiPM~SiPMTest\\3\\");
 
     static std::stringstream gss;
 };
