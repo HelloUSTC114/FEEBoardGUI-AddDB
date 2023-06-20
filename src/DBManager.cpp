@@ -19,6 +19,7 @@
 #include <TGraph.h>
 #include <TF1.h>
 #include <TStyle.h>
+#include <TTree.h>
 
 #include "DBManager.h"
 
@@ -75,7 +76,7 @@ bool DBManager::DeleteFromTable(QString sTableName, int ID, int boardNo)
     return true;
 }
 
-int DBManager::InsertChannelInfo(int boardNo, double *values, bool *valids)
+int DBManager::InsertChannelInfo(int boardNo, double *values, bool *valids, QString sComment)
 {
     // Generate Key
     static int gPrimaryKey = 1;
@@ -91,7 +92,7 @@ int DBManager::InsertChannelInfo(int boardNo, double *values, bool *valids)
         if (ch != 31)
             sInsert += ",";
     }
-    sInsert += ");";
+    sInsert += ",?);";
     fDBQuery.prepare(sInsert);
     fDBQuery.bindValue(0, currentKey);
     fDBQuery.bindValue(1, boardNo);
@@ -102,6 +103,10 @@ int DBManager::InsertChannelInfo(int boardNo, double *values, bool *valids)
         else
             fDBQuery.bindValue(ch + 2, QVariant::QVariant());
     }
+    if (sComment == "")
+        fDBQuery.bindValue(34, QVariant::QVariant());
+    else
+        fDBQuery.bindValue(34, sComment);
     if (!fDBQuery.exec())
     {
         qDebug() << fDBQuery.lastError();
@@ -605,7 +610,7 @@ int DBManager::InsertFEEBoardEntry(int boardNo, int ampTableEntry, int biasTable
 
 int DBManager::ReadFEEBoardEntry(int feeBoardID, int &boardNo, int &ampTableEntry, int &biasTableEntry)
 {
-    QString sSelect = "SELECT * FROM AMPINFO WHERE ID=%1;";
+    QString sSelect = "SELECT * FROM FEEBOARD WHERE ID=%1;";
     sSelect = sSelect.arg(feeBoardID);
     fDBQuery.exec(sSelect);
     if (!fDBQuery.next())
@@ -621,7 +626,7 @@ int DBManager::ReadFEEBoardEntry(int feeBoardID, int &boardNo, int &ampTableEntr
 
 int DBManager::ReadFEEBoardEntry(int boardNo, int &ampTableEntry, int &biasTableEntry)
 {
-    QString sSelect = "SELECT ID FROM SIPMBOARD WHERE (BoardNo = %1 AND BT = %2);";
+    QString sSelect = "SELECT ID FROM FEEBOARD WHERE (BoardNo = %1);";
     sSelect = sSelect.arg(boardNo);
     fDBQuery.exec(sSelect);
     if (!fDBQuery.next())
@@ -683,7 +688,7 @@ void DBManager::Init(QString sDBName)
         scmd += sDBName;
         // F:/Projects/FEEDistri/DataBase/Calibration.db
         scmd += " \".read F:/Projects/FEEDistri/DataBase/GenerateDB.sql\"";
-        fProcess.execute(scmd);
+        QProcess::execute(scmd);
         // qDebug() << fProcess.error();
         // fDBQuery.exec(".read F:\\Projects\\FEEDistri\\DataBase\\GenerateDB.sql");
         // qDebug() << fDBQuery.lastError();
@@ -1235,13 +1240,13 @@ bool BoardTestResult::ReadAmpTestEntry(int ampTestEntry)
 {
     int board1;
 
-    int ampKey[256];
-    bool ampValid[256];
+    int ampKey[63];
+    bool ampValid[63];
     int rtn;
     rtn = gDBManager->ReadAmpTable(ampTestEntry, board1, ampKey, ampValid);
     if (rtn < 0)
         return false;
-    for (int amp = 0; amp < 256; amp++)
+    for (int amp = 0; amp < 63; amp++)
     {
         if (!ampValid[amp])
             continue;
@@ -1265,7 +1270,7 @@ bool BoardTestResult::ReadAmpTestEntry(int ampTestEntry)
         // Here ampSet, which is read from DB, mush be eqiuvalence with amp
         if (ampSet != amp)
         {
-            std::cout << "Fatal error in reading algorithm:" << std::endl;
+            std::cout << "Fatal error in reading algorithm: " << ampSet << '\t' << amp << std::endl;
             return false;
         }
         fAMPTable[amp].ampSet = amp;
@@ -1552,6 +1557,64 @@ double BoardTestResult::GetPed(int ch, int ampDAC, GAINTYPE hl)
     return 0.0;
 }
 
+TGraphErrors *BoardTestResult::GetPedStdDevGraph(TGraphErrors *tge, int ch, GAINTYPE hl)
+{
+    if (!tge)
+        return NULL;
+    tge->Set(0);
+
+    int pointCounter = 0;
+    for (auto iter = fAMPTable.begin(); iter != fAMPTable.end(); iter++)
+    {
+        if (hl == hg)
+            tge->SetPoint(pointCounter, iter->second.ampSet, iter->second.hgPedStdDev[ch]);
+        else
+            tge->SetPoint(pointCounter, iter->second.ampSet, iter->second.lgPedStdDev[ch]);
+        pointCounter++;
+    }
+    std::string sHL;
+    if (hl == hg)
+        sHL = "hg";
+    else
+        sHL = "lg";
+
+    tge->SetTitle(Form("board-%d-%s;Ampifier Factor;#Delta_{V}/A", fBoardNo, sHL.c_str()));
+    return tge;
+}
+
+TGraphErrors *BoardTestResult::GetAmpCaliGraph(TGraphErrors *tge, int ch, GAINTYPE hl)
+{
+    if (!tge)
+        return NULL;
+    tge->Set(0);
+
+    int pointCounter = 0;
+    for (auto iter = fAMPTable.begin(); iter != fAMPTable.end(); iter++)
+    {
+        double ampFactor;
+        int ampSet = iter->second.ampSet;
+        if (hl == hg)
+        {
+            ampFactor = 600.0 / (63.0 - ampSet);
+            tge->SetPoint(pointCounter, ampFactor, iter->second.hgCali[ch] / ampFactor);
+        }
+        else
+        {
+            ampFactor = 60.0 / (63.0 - ampSet);
+            tge->SetPoint(pointCounter, ampFactor, iter->second.lgCali[ch] / ampFactor);
+        }
+        pointCounter++;
+    }
+    std::string sHL;
+    if (hl == hg)
+        sHL = "hg";
+    else
+        sHL = "lg";
+
+    tge->SetTitle(Form("board-%d-%s;Amp DAC Set;ADC StdDev", fBoardNo, sHL.c_str()));
+    return tge;
+}
+
 int BoardTestResult::WriteIntoDB()
 {
     std::cout << "Writing into Database: board:" << fBoardNo << std::endl;
@@ -1800,6 +1863,7 @@ bool SiPMTestResult::GenerateFromSiPMTestFile(int board, SIPMBOARDTYPE bt)
             gss >> gainNow;
             gss >> c;
             // fValue[ch][fNbiasSetPoints] = gainNow;
+            fBiasSetMap[biasSetNow].biasSet = biasSetNow;
             fBiasSetMap[biasSetNow].vBiasValue[ch + fChannelOffset] = gainNow;
         }
         fNbiasSetPoints++;
@@ -1816,6 +1880,15 @@ void SiPMTestResult::Dump(std::ostream &os)
 {
     os << "File name: " << fsPath + fsFileName << std::endl;
     os << "Board: " << fBoardNo << '\t' << fsBT << std::endl;
+    os << "Source: " << fGeneratedFromDB << '\t' << fGeneratedFromSource << std::endl;
+
+    for (int ch = 0; ch < 24; ch++)
+    {
+        os << ch << '\t' << fTSlope[ch] << '\t' << fBiasSlope[ch] << '\t' << fBDVoltage[ch] << '\t' << fTCompFactor[ch] << std::endl;
+    }
+
+    if (!IsDetailed())
+        return;
 
     os << "Temperature measurement points: " << fNTMeasPoints << std::endl;
     for (int i = 0; i < fNTMeasPoints; i++)
@@ -1850,6 +1923,22 @@ TGraphErrors *SiPMTestResult::GetTMeasureGraph(TGraphErrors *tge, int ch)
     {
         tge->SetPoint(i, fTMeas[ch / 8][i], fTMeasResult[ch / 8][ch % 8][i]);
         tge->SetPointError(i, 0.5, 1);
+    }
+    return tge;
+}
+
+TGraphErrors *SiPMTestResult::GetVMeasureGraph(TGraphErrors *tge, int ch)
+{
+    if (!IsDetailed())
+        return NULL;
+    ch += fChannelOffset;
+    tge->Set(0);
+    int pointCounter = 0;
+    for (auto iter = fBiasSetMap.begin(); iter != fBiasSetMap.end(); iter++)
+    {
+        double x = iter->second.biasSet;
+        double y = iter->second.vBiasValue[ch];
+        tge->SetPoint(pointCounter++, x, y);
     }
     return tge;
 }
@@ -2126,6 +2215,7 @@ bool SiPMTestResult::ReadFromDB(int board, SIPMBOARDTYPE bt)
 }
 
 // #define ANALYZE_DATA 1
+#define DRAW_VERBOSE 1
 
 void GenerateDBFromSource()
 {
@@ -2157,23 +2247,48 @@ void GenerateDBFromSource()
     }
 
 #ifdef ANALYZE_DATA
+    auto file = new TFile("AnalyzeFile.root", "recreate");
+    auto sipmTree = new TTree("sipm", "sipm");
+    double biasSlope[24];
+    double biasSlopeCor[24];
+    double corFactor[24];
+    double TSlope[24];
+    double bdV[24];
+    double bdT[24];
+    double TCompFactor[24];
+
+    sipmTree->Branch("biasSlope", biasSlope, "biasSlope[24]/D");
+    sipmTree->Branch("biasSlopeCor", biasSlopeCor, "biasSlopeCor[24]/D");
+    sipmTree->Branch("corFactor", corFactor, "corFactor[24]/D");
+    sipmTree->Branch("TSlope", TSlope, "TSlope[24]/D");
+    sipmTree->Branch("bdV", bdV, "bdV[24]/D");
+    sipmTree->Branch("bdT", bdT, "bdT[24]/D");
+    sipmTree->Branch("TCompFactor", TCompFactor, "TCompFactor[24]/D");
+
     std::vector<std::pair<int, int>> mapTop;
     std::vector<std::pair<int, int>> mapBottom;
     gStyle->SetOptFit(111);
-    auto f = new TF1("f", "pol1", 0, 60);
+    auto f = new TF1("f", "pol1", 0, 600);
     auto c = new TCanvas("c", "c", 1);
-    auto file = new TFile("AnalyzeFile.root", "recreate");
     auto hBD = new TH1D("hBD", "hBD", 50, 50, 52.5);
     auto hGain = new TH1D("hGain", "hGain", 50, 150, 250);
     auto hGainCor = new TH1D("hGainCor", "hGainCor", 50, 150, 250);
     auto hCompFactor = new TH1D("hCompFactor", "hCompFactor", 50, 30, 80);
+    auto hTSlope = new TH1D("hTSlope", "hTSlope", 50, -15, -8);
     // auto hPedHG = new TH1D("hPedHG", "hPedHG", 50, 3000, 5000);
     auto hPed = new TH2D("hPed", "hPed", 50, 2500, 6000, 50, 2500, 6000);
+    auto hAmpCaliHG0 = new TH1D("hAmpCaliHG0", "hPed", 50, 6.5, 9);
+    auto hAmpCaliLG0 = new TH1D("hAmpCaliLG0", "hPed", 50, 6.5, 9);
+    auto hAmpCaliHG43 = new TH1D("hAmpCaliHG43", "hPed", 50, 6.5, 9);
+    auto hAmpCaliLG43 = new TH1D("hAmpCaliLG43", "hPed", 50, 6.5, 9);
     auto hBias0 = new TH1D("hBias0", "hBias0", 50, 4, 5);
     auto hBias255 = new TH1D("hBias255", "hBias255", 50, 0, 1);
 
     auto tg = new TGraphErrors();
     tg->SetTitle("T Measure;T/^#{circ}C;ADCValue");
+    hGainCor->SetTitle(";Gain-Bias slope(adc/mV);Counts");
+    hGain->SetTitle(";Gain-Bias slope(adc/mV);Counts");
+    hCompFactor->SetTitle(";Temperature Compensation Factor(mV/^{#circ}C);Counts");
 
     double vAmpCor[32];
     for (int ch = 0; ch < 32; ch++)
@@ -2189,47 +2304,90 @@ void GenerateDBFromSource()
             // auto bd1 = vSiPMBottom[board]->GetBDVoltageV(ch);
             if (bd1 < 50 || bd1 > 60)
                 std::cout << "Error bot: " << board << '\t' << ch << std::endl;
-            auto bd2 = vSiPMTop[board]->GetBDVoltageV(ch) + (vSiPMTop[board]->GetBDVoltageT(ch) - 25) * vSiPMTop[board]->GetTCompFactor(ch) / 1000.0;
-            // auto bd2 = vSiPMTop[board]->GetBDVoltageV(ch);
-            if (bd2 < 50 || bd2 > 60)
-                std::cout << "Error top: " << board << '\t' << ch << std::endl;
+
             hBD->Fill(bd1);
-            hBD->Fill(bd2);
-
             hGain->Fill(vSiPMBottom[board]->GetBiasSlope(ch));
-            hGain->Fill(vSiPMTop[board]->GetBiasSlope(ch));
+            hGainCor->Fill(vSiPMBottom[board]->GetBiasSlope(ch) / vAmpCor[ch]);
+            hTSlope->Fill(vSiPMBottom[board]->GetTSlope(ch));
+            auto tslope = vSiPMBottom[board]->GetTSlope(ch);
 
-            hGainCor->Fill(vSiPMBottom[board]->GetBiasSlope(ch) * vAmpCor[ch]);
-            hGainCor->Fill(vSiPMTop[board]->GetBiasSlope(ch) * vAmpCor[ch]);
+            // f->SetParameters(800, -10);
+            // tg = vSiPMBottom[board]->GetTMeasureGraph(tg, ch);
+            // tg->SetTitle(Form("board-%d-bottom-ch%d;T/^{#circ}C;ADCValue", board, vSiPMBottom[board]->GetRealChannel(ch)));
+            // tg->Draw("AZL*");
+            // tg->Fit(f, "RQ", "", 22, 47);
+            // c->SaveAs(Form("TMeasure/board-%d-bottom-ch%d.jpg", board, vSiPMBottom[board]->GetRealChannel(ch)));
 
-            f->SetParameters(800, -10);
-            tg = vSiPMBottom[board]->GetTMeasureGraph(tg, ch);
-            tg->SetTitle(Form("board-%d-bottom-ch%d;T/^{#circ}C;ADCValue", board, vSiPMBottom[board]->GetRealChannel(ch)));
+            f->SetParameters(4000, 200);
+            tg = vSiPMBottom[board]->GetVMeasureGraph(tg, ch);
+            tg->SetTitle(Form("board-%d-bottom-ch%d;Bias DAC Set;ADCValue", board, vSiPMBottom[board]->GetRealChannel(ch)));
             tg->Draw("AZL*");
             tg->Fit(f, "RQ", "", 22, 47);
-            c->SaveAs(Form("TMeasure/board-%d-bottom-ch%d.jpg", board, vSiPMBottom[board]->GetRealChannel(ch)));
+            c->SaveAs(Form("VMeasure/board-%d-bottom-ch%d.jpg", board, vSiPMBottom[board]->GetRealChannel(ch)));
 
             auto chi2 = f->GetChisquare();
             if (chi2 < 50)
                 hCompFactor->Fill(vSiPMBottom[board]->GetTCompFactor(ch));
             double factor = vSiPMBottom[board]->GetTCompFactor(ch);
-            if (factor < 50 || factor > 60)
+            if (tslope > -9.8 || tslope < -13.1)
+                // if (factor < 50 || factor > 60)
                 mapBottom.push_back(std::pair<int, int>(board, ch));
 
-            tg = vSiPMTop[board]->GetTMeasureGraph(tg, ch);
-            tg->SetTitle(Form("board-%d-top-ch%d;T/^{#circ}C;ADCValue", board, vSiPMTop[board]->GetRealChannel(ch)));
+            biasSlope[ch] = vSiPMBottom[board]->GetBiasSlope(ch);
+            biasSlopeCor[ch] = biasSlope[ch] / vAmpCor[ch];
+            corFactor[ch] = vAmpCor[ch];
+            TSlope[ch] = vSiPMBottom[board]->GetTSlope(ch);
+            bdV[ch] = vSiPMBottom[board]->GetBDVoltageV(ch);
+            bdT[ch] = vSiPMBottom[board]->GetBDVoltageT(ch);
+            TCompFactor[ch] = vSiPMBottom[board]->GetTCompFactor(ch);
+        }
+        sipmTree->Fill();
+
+        for (int ch = 0; ch < 24; ch++)
+        {
+            auto bd2 = vSiPMTop[board]->GetBDVoltageV(ch) + (vSiPMTop[board]->GetBDVoltageT(ch) - 25) * vSiPMTop[board]->GetTCompFactor(ch) / 1000.0;
+            hBD->Fill(bd2);
+
+            // auto bd2 = vSiPMTop[board]->GetBDVoltageV(ch);
+            if (bd2 < 50 || bd2 > 60)
+                std::cout << "Error top: " << board << '\t' << ch << std::endl;
+
+            hGain->Fill(vSiPMTop[board]->GetBiasSlope(ch));
+            hGainCor->Fill(vSiPMTop[board]->GetBiasSlope(ch) * vAmpCor[ch]);
+            hTSlope->Fill(vSiPMTop[board]->GetTSlope(ch));
+            auto tslope = vSiPMTop[board]->GetTSlope(ch);
+
+            // tg = vSiPMTop[board]->GetTMeasureGraph(tg, ch);
+            // tg->SetTitle(Form("board-%d-top-ch%d;T/^{#circ}C;ADCValue", board, vSiPMTop[board]->GetRealChannel(ch)));
+            // tg->Draw("AZL*");
+            // tg->Fit(f, "RQ", "", 22, 47);
+            // c->SaveAs(Form("TMeasure/board-%d-top-ch%d.jpg", board, vSiPMTop[board]->GetRealChannel(ch)));
+
+            f->SetParameters(4000, 200);
+            tg = vSiPMTop[board]->GetVMeasureGraph(tg, ch);
+            tg->SetTitle(Form("board-%d-top-ch%d;Bias DAC Set;ADCValue", board, vSiPMTop[board]->GetRealChannel(ch)));
             tg->Draw("AZL*");
             tg->Fit(f, "RQ", "", 22, 47);
-            c->SaveAs(Form("TMeasure/board-%d-top-ch%d.jpg", board, vSiPMTop[board]->GetRealChannel(ch)));
+            c->SaveAs(Form("VMeasure/board-%d-top-ch%d.jpg", board, vSiPMTop[board]->GetRealChannel(ch)));
 
-            chi2 = f->GetChisquare();
+            auto chi2 = f->GetChisquare();
             if (chi2 < 50)
                 hCompFactor->Fill(vSiPMTop[board]->GetTCompFactor(ch));
 
-            factor = vSiPMTop[board]->GetTCompFactor(ch);
-            if (factor < 50 || factor > 60)
+            auto factor = vSiPMTop[board]->GetTCompFactor(ch);
+            if (tslope > -9.8 || tslope < -13.1)
+                // if (factor < 50 || factor > 60)
                 mapTop.push_back(std::pair<int, int>(board, ch));
+
+            biasSlope[ch] = vSiPMTop[board]->GetBiasSlope(ch);
+            biasSlopeCor[ch] = biasSlope[ch] / vAmpCor[ch];
+            corFactor[ch] = vAmpCor[ch];
+            TSlope[ch] = vSiPMTop[board]->GetTSlope(ch);
+            bdV[ch] = vSiPMTop[board]->GetBDVoltageV(ch);
+            bdT[ch] = vSiPMTop[board]->GetBDVoltageT(ch);
+            TCompFactor[ch] = vSiPMTop[board]->GetTCompFactor(ch);
         }
+        sipmTree->Fill();
     }
 
     for (auto iter = mapTop.begin(); iter != mapTop.end(); iter++)
@@ -2237,16 +2395,32 @@ void GenerateDBFromSource()
         int board = iter->first;
         int channel = iter->second;
         std::cout << "Top: " << board << '\t' << channel << '\t' << vSiPMTop[board]->GetTCompFactor(channel) << '\t' << vSiPMTop[board]->GetBiasSlope(channel) << '\t' << vSiPMTop[board]->GetTSlope(channel) << std::endl;
+
+        f->SetParameters(800, -10);
+        tg = vSiPMTop[board]->GetTMeasureGraph(tg, channel);
+        tg->SetTitle(Form("board-%d-top-ch%d;T/^{#circ}C;ADCValue", board, vSiPMTop[board]->GetRealChannel(channel)));
+        tg->Draw("AZL*");
+        tg->Fit(f, "RQ", "", 22, 47);
+        c->SaveAs(Form("TMeasure/board-%d-top-ch%d.jpg", board, vSiPMTop[board]->GetRealChannel(channel)));
     }
     for (auto iter = mapBottom.begin(); iter != mapBottom.end(); iter++)
     {
         int board = iter->first;
         int channel = iter->second;
         std::cout << "Bottom: " << board << '\t' << channel << '\t' << vSiPMBottom[board]->GetTCompFactor(channel) << '\t' << vSiPMBottom[board]->GetBiasSlope(channel) << '\t' << vSiPMBottom[board]->GetTSlope(channel) << std::endl;
+
+        f->SetParameters(800, -10);
+        tg = vSiPMBottom[board]->GetTMeasureGraph(tg, channel);
+        tg->SetTitle(Form("board-%d-top-ch%d;T/^{#circ}C;ADCValue", board, vSiPMBottom[board]->GetRealChannel(channel)));
+        tg->Draw("AZL*");
+        tg->Fit(f, "RQ", "", 22, 47);
+        c->SaveAs(Form("TMeasure/board-%d-bottom-ch%d.jpg", board, vSiPMBottom[board]->GetRealChannel(channel)));
     }
 
     for (int board = 0; board < 11; board++)
     {
+        auto mghg = new TMultiGraph;
+        auto mglg = new TMultiGraph;
         for (int ch = 0; ch < 32; ch++)
         {
             auto hgped = vFEE[board]->GetPed(ch, 20, hg);
@@ -2255,8 +2429,44 @@ void GenerateDBFromSource()
             hBias0->Fill(vFEE[board]->GetBias(ch, 0));
             hBias255->Fill(vFEE[board]->GetBias(ch, 255));
             // std::cout << hgped << '\t' << lgped << std::endl;
+            double factor0 = 60.0 / 63.0, factor43 = 60.0 / (63.0 - 43.0);
+            hAmpCaliHG0->Fill(vFEE[board]->GetCaliResult(ch, 0, hg) / 10.0 / factor0);
+            hAmpCaliLG0->Fill(vFEE[board]->GetCaliResult(ch, 0, lg)) / factor0;
+            hAmpCaliHG43->Fill(vFEE[board]->GetCaliResult(ch, 43, hg) / 10.0 / factor43);
+            hAmpCaliLG43->Fill(vFEE[board]->GetCaliResult(ch, 43, lg) / factor43);
+
+            auto tghg = new TGraphErrors;
+            vFEE[board]->GetPedStdDevGraph(tghg, ch, hg);
+            mghg->Add(tghg);
+
+            auto tglg = new TGraphErrors;
+            vFEE[board]->GetPedStdDevGraph(tglg, ch, lg);
+            mglg->Add(tglg);
         }
+#if (DRAW_VERBOSE == 1)
+        auto fileTemp = new TFile(Form("FEEBoard-%d.root", board), "recreate");
+
+        auto mgNew = new TMultiGraph;
+        auto tge1 = new TGraphErrors();
+        tge1 = vFEE[board]->GetAmpCaliGraph(tge1, 0, hg);
+        mgNew->Add(tge1);
+        auto tge2 = new TGraphErrors();
+        tge2 = vFEE[board]->GetAmpCaliGraph(tge2, 0, lg);
+        mgNew->Add(tge2);
+        mgNew->SetTitle(Form(";Ampifier Factor;#Delta_{V}/A", board));
+        mgNew->Write(Form("mgTest_%d", board));
+
+        mghg->SetTitle(Form("hg-%d;Amp DAC Set;ADC StdDev", board));
+        mglg->SetTitle(Form("lg-%d;Amp DAC Set;ADC StdDev", board));
+        mghg->Write(Form("mghg_%d", board));
+        mglg->Write(Form("mglg_%d", board));
+        delete fileTemp;
+        // delete mgNew;
+#endif
+        delete mghg;
+        delete mglg;
     }
+    file->cd();
     hBD->Write();
     hGain->Write();
     hGainCor->Write();
@@ -2264,6 +2474,13 @@ void GenerateDBFromSource()
     hPed->Write();
     hBias0->Write();
     hBias255->Write();
+    hTSlope->Write();
+    sipmTree->Write();
+
+    hAmpCaliHG0->Write();
+    hAmpCaliLG0->Write();
+    hAmpCaliHG43->Write();
+    hAmpCaliLG43->Write();
     delete file;
 #endif
 

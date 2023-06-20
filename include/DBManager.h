@@ -9,6 +9,7 @@
 #include <map>
 
 #define gDBManager (DBManager::Instance())
+class TGraphErrors;
 
 enum GAINTYPE
 {
@@ -55,7 +56,7 @@ public:
     /// @param values values for 32 ch
     /// @param valids whether this channel is valid
     /// @return ID for the channel info
-    int InsertChannelInfo(int boardNo, double *values, bool *valids);
+    int InsertChannelInfo(int boardNo, double *values, bool *valids, QString sComment = "");
     int ReadChannelInfo(int chID, int &boardNo, double *values, bool *valids);
     bool DeleteChannelInfo(int chID, int boardNo);
 
@@ -170,13 +171,15 @@ public:
     double GetCaliResult(int ch, int ampDAC, GAINTYPE hl);
     double GetPed(int ch, int ampDAC, GAINTYPE hl);
     double GetBias(int ch, int biasDAC) { return fBiasTable[biasDAC].vBiasValue[ch]; };
+    TGraphErrors *GetPedStdDevGraph(TGraphErrors *tge, int ch, GAINTYPE hl);
+    TGraphErrors *GetAmpCaliGraph(TGraphErrors *tge, int ch, GAINTYPE hl);
 
 private:
     int fBoardNo;
     bool fIsValid = 0;
     bool fGeneratedFromSource = 0;
     bool fGeneratedFromDB = 0;
-    
+
     std::string fsDepoPath;
     std::string fsCaliPath;
     std::string fsPedPath;
@@ -198,7 +201,6 @@ private:
     void InitBoard(int boardNo, std::string sDepoPath = "E:\\Data\\~CALI~Calibration-Result\\ProducedForSQLite\\");
 };
 
-class TGraphErrors;
 class SiPMTestResult
 {
 public:
@@ -219,6 +221,7 @@ public:
     double GetBiasSlope(int ch) { return fBiasSlope[ch]; };
 
     TGraphErrors *GetTMeasureGraph(TGraphErrors *tge, int ch);
+    TGraphErrors *GetVMeasureGraph(TGraphErrors *tge, int ch);
 
 private:
     int fBoardNo;

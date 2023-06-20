@@ -3,6 +3,7 @@
 #include <QDateTime>
 #include <QDir>
 #include <QTime>
+#include <QDebug>
 
 // C++ STL
 #include <fstream>
@@ -66,7 +67,29 @@ int main(int argc, char *argv[])
     // res.GenerateFromSource(0);
     // res.WriteIntoDB();
 
-    GenerateDBFromSource();
+    // // BoardTestResult res;
+    // auto time = QTime::currentTime();
+    // for (int i = 0; i < 6; i++)
+    // {
+    //     SiPMTestResult res;
+    //     res.ReadFromDB(0, bottom);
+    //     // res.Dump(std::cout);
+    // }
+    // for (int i = 0; i < 6; i++)
+    // {
+    //     SiPMTestResult res;
+    //     res.ReadFromDB(0, top);
+    //     // res.Dump(std::cout);
+    // }
+    // for (int i = 0; i < 11; i++)
+    // {
+    //     BoardTestResult res;
+    //     res.ReadFromDB(i);
+    //     // res.Dump(std::cout);
+    // }
+    // qDebug() << time.msecsTo(QTime::currentTime());
+
+    // GenerateDBFromSource();
     return 0;
     QApplication qapp(argc, argv);
     new TApplication("QTCanvas Demo", &argc, argv);

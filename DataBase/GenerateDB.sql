@@ -390,7 +390,8 @@ CREATE TABLE CHANNELSINFO(
     Channel28Value REAL,
     Channel29Value REAL,
     Channel30Value REAL,
-    Channel31Value REAL
+    Channel31Value REAL,
+    Comment TEXT
 );
 CREATE TABLE SIPMBOARD(
     ID INT PRIMARY KEY NOT NULL,
