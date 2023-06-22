@@ -645,6 +645,35 @@ bool DBManager::DeleteFEEBoardEntry(int feeBoardID, int boardNo)
     return DeleteFromTable("FEEBOARD", feeBoardID, boardNo);
 }
 
+int DBManager::ReadFEEBoardLists(std::vector<int> &output)
+{
+    output.clear();
+    QString sSelect = "SELECT BoardNo FROM FEEBOARD;";
+    fDBQuery.exec(sSelect);
+    for (; fDBQuery.next();)
+    {
+        int boardNo = fDBQuery.value(0).toInt();
+        output.push_back(boardNo);
+    }
+
+    return output.size();
+}
+
+int DBManager::ReadSiPMBoardLists(std::vector<std::pair<int, SIPMBOARDTYPE>> &output)
+{
+    output.clear();
+    QString sSelect = "SELECT BoardNo,BT FROM SIPMBOARD;";
+    fDBQuery.exec(sSelect);
+    for (; fDBQuery.next();)
+    {
+        int boardNo = fDBQuery.value(0).toInt();
+        SIPMBOARDTYPE bt = (SIPMBOARDTYPE)fDBQuery.value(1).toInt();
+        output.push_back(std::pair<int, SIPMBOARDTYPE>(boardNo, bt));
+    }
+
+    return output.size();
+}
+
 void DBManager::Init(QString sDBName)
 {
     if (QSqlDatabase::contains("qt_sql_default_connection"))
@@ -662,11 +691,13 @@ void DBManager::Init(QString sDBName)
     if (fDataBase.open())
     {
         qInfo() << "Successfully open Database: " << sDBName;
+        fsDBFile = sDBName;
         fInitiated = 1;
     }
     else
     {
         qInfo() << "Falied to open Database: " << sDBName;
+        fsDBFile = "";
         fInitiated = 0;
     }
     fDBQuery = QSqlQuery(fDataBase);
@@ -693,6 +724,16 @@ void DBManager::Init(QString sDBName)
         // fDBQuery.exec(".read F:\\Projects\\FEEDistri\\DataBase\\GenerateDB.sql");
         // qDebug() << fDBQuery.lastError();
     }
+}
+
+void DBManager::ReadFromDB(QString sDBName)
+{
+    if (!fInitiated)
+        Init(sDBName);
+    if (fsDBFile != sDBName)
+        qInfo() << "Warning in Reading DB, giving DB name is not equal to initiated DB, use initiated DB";
+    ReadFEEBoardLists(fvFEEBoardNo);
+    ReadSiPMBoardLists(fvSiPMBoardNo);
 }
 
 /// @brief Process amp test csv file
@@ -1472,8 +1513,8 @@ void BoardTestResult::GenerateBias()
 
 void BoardTestResult::InitBoard(int boardNo, std::string sDepoPath)
 {
-    if (fIsValid)
-        return;
+    // if (fIsValid)
+    //     return;
     if (boardNo < 0 || boardNo > 10)
         return;
     fsDepoPath = sDepoPath;
@@ -1482,8 +1523,8 @@ void BoardTestResult::InitBoard(int boardNo, std::string sDepoPath)
 
 bool BoardTestResult::GenerateFromSource(int board, std::string sDepoPath)
 {
-    if (fIsValid)
-        return false;
+    // if (fIsValid)
+    //     return false;
     if (board < 0 || board > 10)
         return false;
     fsDepoPath = sDepoPath;
@@ -1625,8 +1666,8 @@ int BoardTestResult::WriteIntoDB()
 
 bool BoardTestResult::ReadFromDB(int board)
 {
-    if (fIsValid)
-        return false;
+    // if (fIsValid)
+    //     return false;
     InitBoard(board);
     int ampEntry, biasEntry;
     int rtn = gDBManager->ReadFEEBoardEntry(board, ampEntry, biasEntry);
@@ -1644,8 +1685,8 @@ bool BoardTestResult::ReadFromDB(int board)
 std::stringstream SiPMTestResult::gss;
 bool SiPMTestResult::GenerateFromSiPMTestFile(int board, SIPMBOARDTYPE bt)
 {
-    if (fIsValid)
-        return false;
+    // if (fIsValid)
+    //     return false;
 
     InitBoardNo(board, bt);
 
@@ -1914,6 +1955,46 @@ void SiPMTestResult::Dump(std::ostream &os)
     }
 }
 
+double SiPMTestResult::GetRealBDVoltageT(int chReal)
+{
+    if ((chReal - fChannelOffset) < 0 || (chReal - fChannelOffset) > 24)
+        return 0;
+    else
+        return fBDTemperature[chReal - fChannelOffset];
+}
+
+double SiPMTestResult::GetRealBDVoltageV(int chReal)
+{
+    if ((chReal - fChannelOffset) < 0 || (chReal - fChannelOffset) > 24)
+        return 0;
+    else
+        return fBDVoltage[chReal - fChannelOffset];
+}
+
+double SiPMTestResult::GetRealTCompFactor(int chReal)
+{
+    if ((chReal - fChannelOffset) < 0 || (chReal - fChannelOffset) > 24)
+        return 0;
+    else
+        return fTCompFactor[chReal - fChannelOffset];
+}
+
+double SiPMTestResult::GetRealTSlope(int chReal)
+{
+    if ((chReal - fChannelOffset) < 0 || (chReal - fChannelOffset) > 24)
+        return 0;
+    else
+        return fTSlope[chReal - fChannelOffset];
+}
+
+double SiPMTestResult::GetRealBiasSlope(int chReal)
+{
+    if ((chReal - fChannelOffset) < 0 || (chReal - fChannelOffset) > 24)
+        return 0;
+    else
+        return fBiasSlope[chReal - fChannelOffset];
+}
+
 TGraphErrors *SiPMTestResult::GetTMeasureGraph(TGraphErrors *tge, int ch)
 {
     if (!IsDetailed())
@@ -2099,8 +2180,8 @@ bool SiPMTestResult::ReadBiasTestEntry(int biasTableEntry)
 
 void SiPMTestResult::InitBoardNo(int boardNo, SIPMBOARDTYPE bt, std::string spath)
 {
-    if (fIsValid)
-        return;
+    // if (fIsValid)
+    //     return;
 
     fBoardNo = boardNo;
     fBT = bt;
@@ -2163,8 +2244,8 @@ bool SiPMTestResult::ReadFromDB(int board, SIPMBOARDTYPE bt)
 {
     if (!gDBManager->IsInitiated())
         return false;
-    if (fIsValid)
-        return false;
+    // if (fIsValid)
+    //     return false;
     InitBoardNo(board, bt);
 
     int tempTableEntry, biasTableEntry, TSlopeEntry, BiasSlopeEntry, BDVEntry, BDTEntry, TCompFactorEntry;

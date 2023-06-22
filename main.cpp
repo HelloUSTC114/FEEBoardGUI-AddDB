@@ -47,7 +47,8 @@ int main(int argc, char *argv[])
     // ReadSiPMTestFile(2, bottom);
     // SiPMTestResult res;
     // res.GenerateFromSiPMTestFile(1, bottom);
-    gDBManager->Init("F:\\Projects\\FEEDistri\\DataBase\\Calibration.db");
+
+    // gDBManager->Init("F:\\Projects\\FEEDistri\\DataBase\\Calibration.db");
     // int boardNo;
     // double values[32];
     // bool valids[32];
@@ -90,7 +91,6 @@ int main(int argc, char *argv[])
     // qDebug() << time.msecsTo(QTime::currentTime());
 
     // GenerateDBFromSource();
-    return 0;
     QApplication qapp(argc, argv);
     new TApplication("QTCanvas Demo", &argc, argv);
 

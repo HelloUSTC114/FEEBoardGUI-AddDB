@@ -40,6 +40,9 @@ struct BiasInfo
     double vBiasValue[32];
 };
 
+class BoardTestResult;
+class SiPMTestResult;
+
 class DBManager
 {
 public:
@@ -141,8 +144,19 @@ public:
     int ReadFEEBoardEntry(int boardNo, int &ampTableEntry, int &biasTableEntry); // Read through board number
     bool DeleteFEEBoardEntry(int feeBoardID, int boardNo);
 
+    /// @brief
+    /// @param
+    /// @return number of fee board entries
+    int ReadFEEBoardLists(std::vector<int> &);
+    int ReadSiPMBoardLists(std::vector<std::pair<int, SIPMBOARDTYPE>> &);
+
+    std::vector<int> GetFEEBoardLists() { return fvFEEBoardNo; };
+    std::vector<std::pair<int, SIPMBOARDTYPE>> GetSiPMBoardLists() { return fvSiPMBoardNo; };
+
     void Init(QString sDBName = "CalibrationDB.db");
     bool IsInitiated() { return fInitiated; }
+
+    void ReadFromDB(QString sDBName = "CalibrationDB.db");
 
 private:
     DBManager();
@@ -150,14 +164,19 @@ private:
 
     bool fInitiated = 0;
 
+    QString fsDBFile;
     QSqlDatabase fDataBase;
     QSqlQuery fDBQuery;
     QProcess fProcess;
+
+    std::vector<int> fvFEEBoardNo;                            // map<boardNo, board>
+    std::vector<std::pair<int, SIPMBOARDTYPE>> fvSiPMBoardNo; // vector<boardNo, boardtype>
 };
 
 class BoardTestResult
 {
 public:
+    bool IsValid() { return fIsValid; };
     static double CalcAmpMultiFactor(int ampDAC, GAINTYPE hl);
     static bool ReadAmpCaliFile(int board, GAINTYPE hl);
     static bool ReadPedMeanFile(int board, GAINTYPE hl);
@@ -204,6 +223,7 @@ private:
 class SiPMTestResult
 {
 public:
+    bool IsValid() { return fIsValid; };
     bool GenerateFromSiPMTestFile(int board, SIPMBOARDTYPE bt);
     int WriteIntoDB();
     bool ReadFromDB(int board, SIPMBOARDTYPE bt);
@@ -219,6 +239,12 @@ public:
     int GetRealChannel(int ch) { return ch + fChannelOffset; };
     double GetTSlope(int ch) { return fTSlope[ch]; };
     double GetBiasSlope(int ch) { return fBiasSlope[ch]; };
+
+    double GetRealBDVoltageT(int chReal);
+    double GetRealBDVoltageV(int chReal);
+    double GetRealTCompFactor(int chReal);
+    double GetRealTSlope(int chReal);
+    double GetRealBiasSlope(int chReal);
 
     TGraphErrors *GetTMeasureGraph(TGraphErrors *tge, int ch);
     TGraphErrors *GetVMeasureGraph(TGraphErrors *tge, int ch);
