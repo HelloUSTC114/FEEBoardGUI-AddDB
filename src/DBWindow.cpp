@@ -114,7 +114,7 @@ void DBWindow::ClearList()
     vFEEBoardList.clear();
     vSiPMBoardList.clear();
     ui->listFEE->clear();
-    ui->listFEE->clear();
+    ui->listSiPM->clear();
     ui->listPair->clear();
     ui->cbbPair->clear();
 }

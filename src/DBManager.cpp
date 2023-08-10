@@ -811,6 +811,12 @@ bool ProcessAmpTestFile(std::string sFileName, double *vampSet, double **vchvalu
     return true;
 }
 
+void BoardTestResult::Clear()
+{
+    fIsValid = 0;
+    fBoardNo = -1;
+}
+
 double BoardTestResult::CalcAmpMultiFactor(int ampDAC, GAINTYPE hl)
 {
     double lgFactor = 60.0 / (63 - ampDAC);
@@ -1513,8 +1519,8 @@ void BoardTestResult::GenerateBias()
 
 void BoardTestResult::InitBoard(int boardNo, std::string sDepoPath)
 {
-    // if (fIsValid)
-    //     return;
+    if (fIsValid)
+        return;
     if (boardNo < 0 || boardNo > 10)
         return;
     fsDepoPath = sDepoPath;
@@ -1523,8 +1529,8 @@ void BoardTestResult::InitBoard(int boardNo, std::string sDepoPath)
 
 bool BoardTestResult::GenerateFromSource(int board, std::string sDepoPath)
 {
-    // if (fIsValid)
-    //     return false;
+    if (fIsValid)
+        return false;
     if (board < 0 || board > 10)
         return false;
     fsDepoPath = sDepoPath;
@@ -1666,8 +1672,8 @@ int BoardTestResult::WriteIntoDB()
 
 bool BoardTestResult::ReadFromDB(int board)
 {
-    // if (fIsValid)
-    //     return false;
+    if (fIsValid)
+        return false;
     InitBoard(board);
     int ampEntry, biasEntry;
     int rtn = gDBManager->ReadFEEBoardEntry(board, ampEntry, biasEntry);
@@ -1683,10 +1689,17 @@ bool BoardTestResult::ReadFromDB(int board)
 }
 
 std::stringstream SiPMTestResult::gss;
+
+void SiPMTestResult::Clear()
+{
+    fIsValid = 0;
+    fBoardNo = -1;
+}
+
 bool SiPMTestResult::GenerateFromSiPMTestFile(int board, SIPMBOARDTYPE bt)
 {
-    // if (fIsValid)
-    //     return false;
+    if (fIsValid)
+        return false;
 
     InitBoardNo(board, bt);
 
@@ -2024,6 +2037,24 @@ TGraphErrors *SiPMTestResult::GetVMeasureGraph(TGraphErrors *tge, int ch)
     return tge;
 }
 
+TGraphErrors *SiPMTestResult::GetBiasSlopeGraph(TGraphErrors *tge, int ch, BoardTestResult &fee)
+{
+    if (!IsDetailed())
+        return NULL;
+    ch += fChannelOffset;
+    tge->Set(0);
+    int pointCounter = 0;
+    for (auto iter = fBiasSetMap.begin(); iter != fBiasSetMap.end(); iter++)
+    {
+        int bias = iter->second.biasSet;
+        double x = 56.0 - fee.GetBias(ch, bias);
+        double y = iter->second.vBiasValue[ch];
+        tge->SetPoint(pointCounter++, x, y);
+    }
+    return tge;
+    return nullptr;
+}
+
 int SiPMTestResult::WriteTempEntry()
 {
     if (!fIsValid)
@@ -2180,8 +2211,8 @@ bool SiPMTestResult::ReadBiasTestEntry(int biasTableEntry)
 
 void SiPMTestResult::InitBoardNo(int boardNo, SIPMBOARDTYPE bt, std::string spath)
 {
-    // if (fIsValid)
-    //     return;
+    if (fIsValid)
+        return;
 
     fBoardNo = boardNo;
     fBT = bt;
@@ -2244,8 +2275,8 @@ bool SiPMTestResult::ReadFromDB(int board, SIPMBOARDTYPE bt)
 {
     if (!gDBManager->IsInitiated())
         return false;
-    // if (fIsValid)
-    //     return false;
+    if (fIsValid)
+        return false;
     InitBoardNo(board, bt);
 
     int tempTableEntry, biasTableEntry, TSlopeEntry, BiasSlopeEntry, BDVEntry, BDTEntry, TCompFactorEntry;
@@ -2295,10 +2326,37 @@ bool SiPMTestResult::ReadFromDB(int board, SIPMBOARDTYPE bt)
     return true;
 }
 
+int DBIOManager::GetTCompSetBias(int channel, double temperature)
+{
+    if (channel < 0 || channel > 31 || !fSiPM.IsValid() || !fFEE.IsValid())
+        return -1;
+
+    /// TODO: Add calculating channel dac value
+    double TCompSlope = fSiPM.GetRealBiasSlope(channel);
+    double MeasredT = fSiPM.GetRealBDVoltageT(channel);
+
+    return 192;
+}
+
+std::vector<std::pair<int, int>> DBIOManager::GetTCompSetBias(int feeBoardNo, const std::pair<int, SIPMBOARDTYPE> &sipmBoard, double temperature)
+{
+    fvBias.clear();
+    fFEE.Clear();
+    fSiPM.Clear();
+    if (!gDBManager->IsInitiated())
+        return fvBias;
+
+    fFEE.ReadFromDB(feeBoardNo);
+    fSiPM.ReadFromDB(sipmBoard.first, sipmBoard.second);
+    for (int ch = 0; ch < 32; ch++)
+        fvBias.push_back(std::pair<int, int>(ch, GetTCompSetBias(ch, temperature)));
+    return fvBias;
+}
+
 // #define ANALYZE_DATA 1
 #define DRAW_VERBOSE 1
 
-void GenerateDBFromSource()
+void DBIOManager::GenerateDBFromSource()
 {
     SiPMTestResult *vSiPMTop[6];
     SiPMTestResult *vSiPMBottom[6];
@@ -2574,4 +2632,10 @@ void GenerateDBFromSource()
     {
         delete vFEE[i];
     }
+}
+
+DBIOManager *DBIOManager::Instance()
+{
+    static auto instance = new DBIOManager();
+    return instance;
 }

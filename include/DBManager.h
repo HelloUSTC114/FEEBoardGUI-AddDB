@@ -176,6 +176,8 @@ private:
 class BoardTestResult
 {
 public:
+    void Clear();
+
     bool IsValid() { return fIsValid; };
     static double CalcAmpMultiFactor(int ampDAC, GAINTYPE hl);
     static bool ReadAmpCaliFile(int board, GAINTYPE hl);
@@ -223,6 +225,8 @@ private:
 class SiPMTestResult
 {
 public:
+    void Clear();
+
     bool IsValid() { return fIsValid; };
     bool GenerateFromSiPMTestFile(int board, SIPMBOARDTYPE bt);
     int WriteIntoDB();
@@ -248,6 +252,8 @@ public:
 
     TGraphErrors *GetTMeasureGraph(TGraphErrors *tge, int ch);
     TGraphErrors *GetVMeasureGraph(TGraphErrors *tge, int ch);
+
+    TGraphErrors *GetBiasSlopeGraph(TGraphErrors *tge, int ch, BoardTestResult &);
 
 private:
     int fBoardNo;
@@ -289,6 +295,33 @@ private:
     static std::stringstream gss;
 };
 
-void GenerateDBFromSource();
+#define gDBIO (DBIOManager::Instance())
+/// @brief Manage IO of database, including reading board info, Generate database, etc..
+class DBIOManager
+{
+public:
+    /// @brief Get temperature compensation, combine information of SiPM Compensation factor & SC bias voltage, set Vdac-Vbd Vov=(Vcommon-Vdac)-Vbd=Vcommon-(Vdac) when temperature == 25 *C
+    /// @param feeBoardNo FEE Board Number
+    /// @param sipmBoard SiPM information, <boardNo, BoardType>
+    /// @param channel setting channel
+    /// @param temperature Measured Temperature
+    /// @return vector containing 32 channels bias setting value
+    std::vector<std::pair<int, int>> GetTCompSetBias(int feeBoardNo, const std::pair<int, SIPMBOARDTYPE> &sipmBoard, double temperature);
+
+    /// @brief Generate Data base from test source
+    void GenerateDBFromSource();
+
+    static DBIOManager *Instance();
+
+private:
+    DBIOManager() = default;
+
+    /// @return setting bias dac value
+    int GetTCompSetBias(int channel, double temperature);
+
+    SiPMTestResult fSiPM;
+    BoardTestResult fFEE;
+    std::vector<std::pair<int, int>> fvBias;
+};
 
 #endif

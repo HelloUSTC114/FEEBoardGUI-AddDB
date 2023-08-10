@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>997</width>
-    <height>996</height>
+    <width>874</width>
+    <height>960</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,18 +17,18 @@
    <widget class="QTabWidget" name="tabWidget">
     <property name="geometry">
      <rect>
-      <x>40</x>
-      <y>60</y>
+      <x>0</x>
+      <y>10</y>
       <width>851</width>
       <height>891</height>
      </rect>
     </property>
     <property name="currentIndex">
-     <number>1</number>
+     <number>0</number>
     </property>
     <widget class="QWidget" name="tab">
      <attribute name="title">
-      <string>Tab 1</string>
+      <string>Pair Control</string>
      </attribute>
      <layout class="QGridLayout" name="gridLayout_3">
       <item row="0" column="0">
@@ -138,7 +138,7 @@
     </widget>
     <widget class="QWidget" name="tab_2">
      <attribute name="title">
-      <string>Tab 2</string>
+      <string>Paired Info</string>
      </attribute>
      <widget class="QGroupBox" name="grpChs">
       <property name="geometry">
@@ -202,7 +202,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>997</width>
+     <width>874</width>
      <height>22</height>
     </rect>
    </property>

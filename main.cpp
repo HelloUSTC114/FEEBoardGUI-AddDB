@@ -31,6 +31,9 @@
 #include <TH1D.h>
 #include <TH2D.h>
 #include <TFile.h>
+#include <TGraphErrors.h>
+#include <TStyle.h>
+#include <TF1.h>
 int main(int argc, char *argv[])
 {
     // ReadAmpCaliFile(0, hg);
@@ -67,6 +70,44 @@ int main(int argc, char *argv[])
     // BoardTestResult res;
     // res.GenerateFromSource(0);
     // res.WriteIntoDB();
+    // auto c = new TCanvas("c", "c", 1);
+    // BoardTestResult board;
+    // board.GenerateFromSource(0);
+    // gStyle->SetOptFit(111);
+    // for (int sipmboard = 0; sipmboard < 6; sipmboard++)
+    // {
+    //     c->cd();
+    //     SiPMTestResult res;
+    //     res.GenerateFromSiPMTestFile(sipmboard, bottom);
+    //     for (int ch = 0; ch < 24; ch++)
+    //     {
+    //         auto tge = new TGraphErrors;
+    //         res.GetBiasSlopeGraph(tge, ch, board);
+    //         tge->SetTitle(";Bias/V;Gain in ADC");
+    //         tge->Fit("pol1","","",53.5,55.5);
+    //         tge->Draw("AZ*L");
+    //         c->SaveAs(Form("VMeasureGraph/%s-%d-ch%d.jpg", "bottom", sipmboard, res.GetRealChannel(ch)));
+    //         delete tge;
+    //     }
+    // }
+
+    // for (int sipmboard = 0; sipmboard < 6; sipmboard++)
+    // {
+    //     c->cd();
+    //     SiPMTestResult res;
+    //     res.GenerateFromSiPMTestFile(sipmboard, top);
+    //     for (int ch = 0; ch < 24; ch++)
+    //     {
+    //         auto tge = new TGraphErrors;
+    //         res.GetBiasSlopeGraph(tge, ch, board);
+    //         tge->SetTitle(";Bias/V;Gain in ADC");
+    //         tge->Fit("pol1","","",53.5,55.5);
+    //         tge->Draw("AZ*L");
+    //         c->SaveAs(Form("VMeasureGraph/%s-%d-ch%d.jpg", "top", sipmboard, res.GetRealChannel(ch)));
+    //         delete tge;
+    //     }
+    // }
+    // return 0;
 
     // // BoardTestResult res;
     // auto time = QTime::currentTime();
@@ -95,9 +136,9 @@ int main(int argc, char *argv[])
     new TApplication("QTCanvas Demo", &argc, argv);
 
     {
-        // gFEEControlWin->show();
+         gFEEControlWin->show();
 
-        gDBWin->show();
+//        gDBWin->show();
 
         return qapp.exec();
 
