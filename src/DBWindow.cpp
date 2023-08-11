@@ -153,6 +153,47 @@ DBWindow *DBWindow::Instance()
     return ins;
 }
 
+std::vector<std::pair<int, int>> DBWindow::GetCurrentCompBias(double temp0, double temp1, double temp2, double temp3)
+{
+    // TODO: insert return statement here
+    ui->lineTemp0->setText(QString::number(temp0));
+    ui->lineTemp1->setText(QString::number(temp1));
+    ui->lineTemp2->setText(QString::number(temp2));
+    ui->lineTemp3->setText(QString::number(temp3));
+
+    GetAllCompBias(temp0, temp1, temp2, temp3);
+    std::vector<std::pair<int, int>> rtnArray;
+    for (int ch = 0; ch < 32; ch++)
+    {
+        rtnArray.push_back(std::pair<int, int>(ch, fCurrentBias[ch]));
+    }
+    return rtnArray;
+}
+
+std::vector<std::pair<int, int>> DBWindow::GetCompBias(int feeBoardNo, double temp0, double temp1, double temp2, double temp3)
+{
+    std::vector<std::pair<int, int>> rtnResult;
+    for (int ch = 0; ch < 32; ch++)
+        rtnResult.push_back(std::pair<int, int>(ch, 200));
+    if (!gDBManager->IsInitiated())
+        return rtnResult;
+
+    int counter = 0;
+    for (auto iter = vPairedInfo.begin(); iter != vPairedInfo.end(); iter++, counter++)
+    {
+        if (iter->first == feeBoardNo)
+        {
+            ui->cbbPair->setCurrentIndex(counter);
+            on_btnShow_clicked();
+            break;
+        }
+    }
+    if (counter == vPairedInfo.size())
+        return rtnResult;
+
+    return GetCurrentCompBias(temp0, temp1, temp2, temp3);
+}
+
 void DBWindow::on_btnDBFile_clicked()
 {
     QString temp;
@@ -162,7 +203,10 @@ void DBWindow::on_btnDBFile_clicked()
         temp = QFileDialog::getOpenFileName(this, "Choose Database", "F:\\Projects\\FEEDistri\\DataBase\\", "*.db");
 
     if (temp == "")
+    {
+        fFileNameIsInput = 0;
         return;
+    }
 
     fsFileName = temp;
     fFileNameIsInput = 1;
@@ -174,6 +218,7 @@ void DBWindow::on_btnOpenDB_clicked()
     if (!gDBManager->OpenDB(fsFileName))
         ui->lblDBLED->setStyleSheet("background-color:rgb(255,0,0)");
     ui->lblDBLED->setStyleSheet("background-color:rgb(0,255,0)");
+    ui->lineDBPath->setText(fsFileName);
     GetBoardListFromDB();
 }
 
@@ -290,13 +335,183 @@ void DBWindow::ReadChanInfo(int ch)
     double biasValue = feeRes->GetBias(ch, bias);
     double sipmTCom = sipmRes->GetRealTCompFactor(ch);
     double sipmBD = sipmRes->GetRealBDVoltageV(ch);
-    double sipmOV = 56 - biasValue - sipmBD;
+    double sipmOV = fCurrentHV - biasValue - sipmBD;
+
+    fCurrentBias[ch] = bias;
+    fCurrentTComp[ch] = sipmTCom;
+    fCurrentBD[ch] = sipmBD;
+    // qDebug() << ch << '\t' << bias << '\t' << sipmTCom << '\t' << sipmBD;
 
     flblAmp[ch]->setText(QString::number(ampCali));
     flblBias[ch]->setText(QString::number(biasValue));
     flblSiPMTCom[ch]->setText(QString::number(sipmTCom));
     flblSiPMBD[ch]->setText(QString::number(sipmBD));
     flblSiPMOV[ch]->setText(QString::number(sipmOV));
+}
+
+#include <fstream>
+#include <sstream>
+#include <iostream>
+SiPMBoardInfo ParseSiPMBoardName(std::string sBoardName)
+{
+    SiPMBoardInfo rtn;
+    int idx = 0;
+    if ((idx = sBoardName.find("board")) != std::string::npos)
+    {
+        rtn.fBT = bottom;
+        rtn.fBoardNo = std::stoi(sBoardName.substr(idx + 5));
+        return rtn;
+    }
+    else if ((idx = sBoardName.find("top")) != std::string::npos)
+    {
+        rtn.fBT = top;
+        rtn.fBoardNo = std::stoi(sBoardName.substr(idx + 3));
+        return rtn;
+    }
+    return rtn;
+}
+bool DBWindow::ReadTCompFile(std::string sInputFile)
+{
+    std::ifstream fin(sInputFile);
+    if (!fin.is_open())
+    {
+        qDebug() << "Error: Cannot open file: " << QString::fromStdString(sInputFile);
+        return false;
+    }
+    std::string sLine;
+    std::getline(fin, sLine);
+
+    QString qsTemp;
+    int lineCount = 0;
+    for (lineCount = 0; fin.good() && !fin.eof() && fin.is_open(); lineCount++)
+    {
+        std::getline(fin, sLine);
+        qsTemp = QString::fromStdString(sLine);
+        std::string sBoardName;
+        int ch;
+        double Vslope, Vbd, Tslope, Tfactor;
+
+        auto list = qsTemp.split(",");
+        if (list.size() < 6)
+            break;
+        sBoardName = list[0].toStdString();
+        ch = list[1].toInt();
+        Vslope = list[2].toDouble();
+        Vbd = list[3].toDouble();
+        Tslope = list[4].toDouble();
+        Tfactor = list[6].toDouble();
+        // qDebug() << list.size() << '\t' << Tfactor;
+        // ss >> sBoardName >> c >> ch >> c >> Vslope >> c >> Vbd >> c >> Tslope >> c >> Tfactor;
+        // qDebug() << QString::fromStdString(sBoardName) << '\t' << ch << '\t' << Vslope << '\t' << Vbd << '\t' << Tslope << '\t' << Tfactor;
+        if (fin.eof() || !fin.good())
+            break;
+        auto sipminfo = ParseSiPMBoardName(sBoardName);
+        fTCompMap[sipminfo][ch] = Tfactor;
+        fBDMap[sipminfo][ch] = Vbd;
+    }
+    fin.close();
+    if (lineCount < 31)
+        return false;
+    return true;
+}
+
+void DBWindow::ProcessTComp()
+{
+    if (!fOtherFileFlag)
+        return;
+    auto iter = fTCompMap.find(fCurrentPair.second);
+    if (iter == fTCompMap.end())
+    {
+        fCurrentTComp = fTCompMap.begin()->second;
+        fCurrentBD = fBDMap.begin()->second;
+    }
+    else
+    {
+        fCurrentTComp = iter->second;
+        fCurrentBD = fBDMap.find(fCurrentPair.second)->second;
+    }
+
+    for (int ch = 0; ch < 32; ch++)
+    {
+        int bias = fcombBias[ch]->value();
+        double biasValue = feeRes->GetBias(ch, bias);
+        double sipmTCom = fCurrentTComp[ch];
+        double sipmBD = fCurrentBD[ch];
+        double sipmOV = fCurrentHV - biasValue - sipmBD;
+
+        // qDebug() << sipmBD << '\t' << fCurrentBD[ch] << '\t' << sipmTCom << '\t' << fCurrentTComp[ch];
+        flblSiPMTCom[ch]->setText(QString::number(sipmTCom));
+        flblSiPMBD[ch]->setText(QString::number(sipmBD));
+        flblSiPMOV[ch]->setText(QString::number(sipmOV));
+    }
+}
+
+int DBWindow::GetCompBias(double Temp, int ch)
+{
+    double tslope = fCurrentTComp[ch];
+    if (tslope < 10 || tslope > 100)
+    {
+        qDebug() << "Error: TSlope: " << tslope << "mV/C";
+        qDebug() << "Setting at default compensation factor: 52mV/C";
+        tslope = 52;
+        // return 200;
+    }
+    double tdevi = (Temp - 25);
+    double biasDevi = tdevi * tslope / 1000.0;
+    double voltage0 = feeRes->GetBias(ch, 200);
+
+    int biasRes = 200;
+    if (biasDevi < 0)
+        for (int bias = 200; bias >= 0; bias--)
+        {
+            double voltage = feeRes->GetBias(ch, bias);
+            // qDebug() << ch << '\t' << Temp << '\t' << bias << '\t' << (voltage - voltage0) * 1000 << '\t' << biasDevi;
+            if (voltage0 - voltage < biasDevi)
+            {
+                biasRes = bias;
+                break;
+            }
+        }
+    else
+        for (int bias = 200; bias < 256; bias++)
+        {
+            double voltage = feeRes->GetBias(ch, bias);
+            // qDebug() << ch << '\t' << Temp << '\t' << bias << '\t' << (voltage - voltage0) * 1000 << '\t' << biasDevi;
+            if (voltage0 - voltage > biasDevi)
+            {
+                biasRes = bias;
+                break;
+            }
+        }
+    qDebug() << Temp << '\t' << ch << '\t' << biasRes;
+    return biasRes;
+}
+
+std::array<double, 32> &DBWindow::GetAllCompBias(const std::array<double, 32> &temp)
+{
+    // TODO: insert return statement here
+    for (int ch = 0; ch < 32; ch++)
+    {
+        double Temp = temp[ch];
+        fCurrentBias[ch] = GetCompBias(Temp, ch);
+        fcombBias[ch]->setValue((int)fCurrentBias[ch]);
+    }
+
+    return fCurrentBias;
+}
+
+std::array<double, 32> &DBWindow::GetAllCompBias(double temp0, double temp1, double temp2, double temp3)
+{
+    // TODO: insert return statement here
+    std::array<double, 32> temp;
+    for (int ch = 0; ch < 8; ch++)
+    {
+        temp[ch] = temp0;
+        temp[ch + 8] = temp1;
+        temp[ch + 16] = temp2;
+        temp[ch + 24] = temp3;
+    }
+    return GetAllCompBias(temp);
 }
 
 bool operator==(const SiPMBoardInfo &a, const SiPMBoardInfo &b)
@@ -317,13 +532,58 @@ bool operator<(const SiPMBoardInfo &a, const SiPMBoardInfo &b)
 
 void DBWindow::on_btnShow_clicked()
 {
-    auto pair = ConvertStringToPair(ui->cbbPair->currentText());
-    feeRes->ReadFromDB(pair.first);
-    sipmRes->ReadFromDB(pair.second.fBoardNo, pair.second.fBT);
+    // qDebug() << ui->cbbPair->currentText();
+    fCurrentPair = ConvertStringToPair(ui->cbbPair->currentText());
+    // qDebug() << fCurrentPair.first << '\t' << fCurrentPair.second.fBoardNo << '\t' << fCurrentPair.second.fBT;
+    feeRes->ReadFromDB(fCurrentPair.first);
+    sipmRes->ReadFromDB(fCurrentPair.second.fBoardNo, fCurrentPair.second.fBT);
     fIsRead = 1;
 
     for (int ch = 0; ch < 32; ch++)
     {
         ReadChanInfo(ch);
     }
+    ProcessTComp();
+}
+
+void DBWindow::on_btnNewTComp_clicked()
+{
+    static QString qsCurrent = "";
+    if (qsCurrent == "")
+        qsCurrent = "E:\\Data\\~Cali~SiPMTestAnalyze\\SiPMTFactor.csv";
+    qsCurrent = QFileDialog::getOpenFileName(this, "Choose Another SiPM Compensation File", qsCurrent, "*.csv");
+    ui->lineNewTComp->setText(qsCurrent);
+
+    auto rtn = ReadTCompFile(qsCurrent.toStdString());
+
+    if (rtn)
+    {
+        fOtherFileFlag = 1;
+        ui->btnNewTComp->setEnabled(false);
+        ui->btnCloseTComp->setEnabled(true);
+    }
+    else
+    {
+        fOtherFileFlag = 0;
+        ui->btnNewTComp->setEnabled(true);
+        ui->btnCloseTComp->setEnabled(false);
+    }
+    ProcessTComp();
+}
+
+void DBWindow::on_btnCloseTComp_clicked()
+{
+    fOtherFileFlag = 0;
+    ui->btnNewTComp->setEnabled(true);
+    ui->btnCloseTComp->setEnabled(false);
+    on_btnShow_clicked();
+}
+
+void DBWindow::on_btnTempComp_clicked()
+{
+    double temp0 = ui->lineTemp0->text().toDouble();
+    double temp1 = ui->lineTemp1->text().toDouble();
+    double temp2 = ui->lineTemp2->text().toDouble();
+    double temp3 = ui->lineTemp3->text().toDouble();
+    GetAllCompBias(temp0, temp1, temp2, temp3);
 }

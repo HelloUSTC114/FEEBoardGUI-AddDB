@@ -136,9 +136,9 @@ int main(int argc, char *argv[])
     new TApplication("QTCanvas Demo", &argc, argv);
 
     {
-         gFEEControlWin->show();
+        gFEEControlWin->show();
 
-//        gDBWin->show();
+        //    gDBWin->show();
 
         return qapp.exec();
 

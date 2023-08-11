@@ -7,6 +7,7 @@
 #include <vector>
 #include <map>
 #include <list>
+#include <array>
 
 #include "DBManager.h"
 
@@ -20,7 +21,7 @@ struct SiPMBoardInfo
 {
     int fBoardNo;
     SIPMBOARDTYPE fBT;
-    SiPMBoardInfo(int boardNo, SIPMBOARDTYPE bt) : fBoardNo(boardNo), fBT(bt){};
+    SiPMBoardInfo(int boardNo = -1, SIPMBOARDTYPE bt = undefined) : fBoardNo(boardNo), fBT(bt){};
 };
 bool operator==(const SiPMBoardInfo &a, const SiPMBoardInfo &b);
 bool operator<(const SiPMBoardInfo &a, const SiPMBoardInfo &b);
@@ -37,6 +38,10 @@ public:
     static DBWindow *Instance();
 
     bool FileNameIsValid() { return fFileNameIsInput; }
+    void SetHVBias(double hv) { fCurrentHV = hv; }
+    std::vector<std::pair<int, int>> GetCurrentCompBias(double temp0, double temp1, double temp2, double temp3); // Set bias = 200 at 25C
+    std::vector<std::pair<int, int>> GetCompBias(int feeBoardNo, double temp0, double temp1, double temp2, double temp3); // Set bias = 200 at 25C
+
 
 private slots:
     void on_btnDBFile_clicked();
@@ -49,16 +54,21 @@ private slots:
 
     void on_btnUnbind_clicked();
 
-
     void on_btnShow_clicked();
+
+    void on_btnNewTComp_clicked();
+
+    void on_btnCloseTComp_clicked();
+
+    void on_btnTempComp_clicked();
 
 private:
     explicit DBWindow(QWidget *parent = nullptr);
     Ui::DBWindow *ui;
 
     QString fsFilePath;
-    QString fsFileName;
-    bool fFileNameIsInput = 0;
+    QString fsFileName = "F:\\Projects\\FEEDistri\\DataBase\\Calibration.db";
+    bool fFileNameIsInput = 1;
 
     void GetBoardListFromDB();
     void ClearList();
@@ -92,6 +102,25 @@ private:
     SiPMTestResult *sipmRes;
     BoardTestResult *feeRes;
     bool fIsRead = 0;
+
+    // Another File for SiPM Info
+    bool fOtherFileFlag = 0;
+    std::map<SiPMBoardInfo, std::array<double, 32>> fTCompMap;
+    std::map<SiPMBoardInfo, std::array<double, 32>> fBDMap;
+    bool ReadTCompFile(std::string sInputFile);
+    void ProcessTComp();
+
+    // Setting Bias Compensation
+    double fCurrentHV = 56;
+    std::pair<int, SiPMBoardInfo> fCurrentPair; // Showing Current pair <FEE Board, SiPM Board>
+    std::array<double, 32> fCurrentBias;        // FEE Board Info
+    std::array<double, 32> fCurrentTComp;       // SiPM Board Info
+    std::array<double, 32> fCurrentBD;          // SiPM Board Info
+
+    // Bias Compensation Calculating
+    int GetCompBias(double Temp, int ch);                                                           // Set bias = 200 at 25C
+    std::array<double, 32> &GetAllCompBias(const std::array<double, 32> &temp);                     // Set bias = 200 at 25C
+    std::array<double, 32> &GetAllCompBias(double temp0, double temp1, double temp2, double temp3); // Set bias = 200 at 25C
 };
 
 #endif // DBWINDOW_H

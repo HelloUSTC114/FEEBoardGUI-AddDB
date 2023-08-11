@@ -1519,8 +1519,8 @@ void BoardTestResult::GenerateBias()
 
 void BoardTestResult::InitBoard(int boardNo, std::string sDepoPath)
 {
-    if (fIsValid)
-        return;
+    // if (fIsValid)
+    //     return;
     if (boardNo < 0 || boardNo > 10)
         return;
     fsDepoPath = sDepoPath;
@@ -1529,8 +1529,8 @@ void BoardTestResult::InitBoard(int boardNo, std::string sDepoPath)
 
 bool BoardTestResult::GenerateFromSource(int board, std::string sDepoPath)
 {
-    if (fIsValid)
-        return false;
+    // if (fIsValid)
+    //     return false;
     if (board < 0 || board > 10)
         return false;
     fsDepoPath = sDepoPath;
@@ -1672,8 +1672,8 @@ int BoardTestResult::WriteIntoDB()
 
 bool BoardTestResult::ReadFromDB(int board)
 {
-    if (fIsValid)
-        return false;
+    // if (fIsValid)
+    //     return false;
     InitBoard(board);
     int ampEntry, biasEntry;
     int rtn = gDBManager->ReadFEEBoardEntry(board, ampEntry, biasEntry);
@@ -1698,8 +1698,8 @@ void SiPMTestResult::Clear()
 
 bool SiPMTestResult::GenerateFromSiPMTestFile(int board, SIPMBOARDTYPE bt)
 {
-    if (fIsValid)
-        return false;
+    // if (fIsValid)
+    //     return false;
 
     InitBoardNo(board, bt);
 
@@ -2211,8 +2211,8 @@ bool SiPMTestResult::ReadBiasTestEntry(int biasTableEntry)
 
 void SiPMTestResult::InitBoardNo(int boardNo, SIPMBOARDTYPE bt, std::string spath)
 {
-    if (fIsValid)
-        return;
+    // if (fIsValid)
+    //     return;
 
     fBoardNo = boardNo;
     fBT = bt;
@@ -2275,8 +2275,8 @@ bool SiPMTestResult::ReadFromDB(int board, SIPMBOARDTYPE bt)
 {
     if (!gDBManager->IsInitiated())
         return false;
-    if (fIsValid)
-        return false;
+    // if (fIsValid)
+    //     return false;
     InitBoardNo(board, bt);
 
     int tempTableEntry, biasTableEntry, TSlopeEntry, BiasSlopeEntry, BDVEntry, BDTEntry, TCompFactorEntry;

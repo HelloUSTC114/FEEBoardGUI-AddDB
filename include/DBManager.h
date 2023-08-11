@@ -20,7 +20,8 @@ enum GAINTYPE
 enum SIPMBOARDTYPE
 {
     bottom,
-    top
+    top,
+    undefined
 };
 
 struct AMPInfo
