@@ -37,16 +37,14 @@ bool DBManager::OpenDB(QString sDBName)
     if (fInitiated)
         CloseDB();
     Init(sDBName);
+    qDebug() << fInitiated;
     return fInitiated;
 }
 
 void DBManager::CloseDB()
 {
-    if (fInitiated)
-    {
-        fDataBase.close();
-        fInitiated = 0;
-    }
+    fDataBase.close();
+    fInitiated = 0;
 }
 
 bool DBManager::DeleteFromTable(QString sTableName, int ID, int boardNo)
@@ -680,7 +678,7 @@ void DBManager::Init(QString sDBName)
     {
         fDataBase = QSqlDatabase::database("qt_sql_default_connection");
     }
-    else
+    // else
     {
         fDataBase = QSqlDatabase::addDatabase("QSQLITE");
         fDataBase.setDatabaseName(sDBName);
@@ -698,7 +696,9 @@ void DBManager::Init(QString sDBName)
     {
         qInfo() << "Falied to open Database: " << sDBName;
         fsDBFile = "";
+        CloseDB();
         fInitiated = 0;
+        return;
     }
     fDBQuery = QSqlQuery(fDataBase);
 

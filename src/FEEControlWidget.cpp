@@ -473,6 +473,9 @@ void FEEControlWin::ProcessDisconnect()
 
     // Send Configuration button
     ui->btnSendConfig->setEnabled(false);
+
+    ui->cbxEnableComp->setEnabled(false);
+    on_cbxEnableComp_stateChanged(0);
 }
 
 void FEEControlWin::handle_connectionBroken(int boardNo)
@@ -847,7 +850,7 @@ void FEEControlWin::ProcessCompOnce()
         return;
     }
     Modify_SP_CITIROC_BiasDAC(gDBWin->GetCompBias(fCurrentBoardNo, fTemperature[0], fTemperature[1], fTemperature[2], fTemperature[3]));
-    fCompCurrentInterval = ui->timeTInterval->time();
+    fCompCurrentInterval = ui->timeTMonitor->time();
     ui->timeTCurrent->setTime(fCompCurrentInterval);
     ui->timeTCountDown->setTime(fCompCurrentInterval);
     fCompStartTime = QDateTime::currentDateTime();
@@ -1826,6 +1829,7 @@ void FEEControlWin::on_btnVISAControl_clicked()
 {
 #ifdef USE_VISA_CONTROL
     gVisaDAQWin->show();
+    gVisaDAQWin->activateWindow();
 #endif
 }
 
@@ -1837,6 +1841,7 @@ void FEEControlWin::on_btnZaberControl_clicked()
 {
 #ifdef USE_ZABER_MOTION
     gZaberWindow->show();
+    gZaberWindow->activateWindow();
 #endif
 }
 
@@ -1955,7 +1960,11 @@ void FEEControlWin::on_btnStopTemp_clicked()
 #include "DBWindow.h"
 void FEEControlWin::on_btnDBWin_clicked()
 {
+//    gDBWin->setWindowFlag(Qt::WindowStaysOnTopHint, false);
     gDBWin->show();
+    gDBWin->activateWindow();
+    gDBWin->setParent(this);
+    gDBWin->showNormal();
 }
 
 void FEEControlWin::on_cbxEnableComp_stateChanged(int arg1)

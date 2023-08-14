@@ -13,6 +13,7 @@ DBWindow::DBWindow(QWidget *parent) : QMainWindow(parent),
                                       ui(new Ui::DBWindow)
 {
     ui->setupUi(this);
+    //    setWindowFlag()
 
     sipmRes = new SiPMTestResult();
     feeRes = new BoardTestResult();
@@ -221,7 +222,10 @@ void DBWindow::on_btnDBFile_clicked()
 void DBWindow::on_btnOpenDB_clicked()
 {
     if (!gDBManager->OpenDB(fsFileName))
+    {
         ui->lblDBLED->setStyleSheet("background-color:rgb(255,0,0)");
+        return;
+    }
     ui->lblDBLED->setStyleSheet("background-color:rgb(0,255,0)");
     ui->lineDBPath->setText(fsFileName);
     GetBoardListFromDB();
