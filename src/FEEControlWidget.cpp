@@ -243,6 +243,9 @@ FEEControlWin::FEEControlWin(QWidget *parent)
     // Temperature Control
     connect(&fTempTimer, SIGNAL(timeout()), this, SLOT(handle_TempMeasurement()));
 
+    // Temperature Compensation
+    connect(&fCompCounterdownTimer, SIGNAL(timeout()), this, SLOT(handle_CompCountDown()));
+
     // End
     // show();
     ui->tabTotal->setCurrentIndex(0);
@@ -290,13 +293,12 @@ FEEControlWin::~FEEControlWin()
 void FEEControlWin::PrintT()
 {
     gBoard->ReadTemp();
-    double temp[4];
-    gBoard->GetTemp(temp);
+    gBoard->GetTemp(fTemperature);
 
-    ui->lblTOut_0->setText(QString::number(temp[0]));
-    ui->lblTOut_1->setText(QString::number(temp[1]));
-    ui->lblTOut_2->setText(QString::number(temp[2]));
-    ui->lblTOut_3->setText(QString::number(temp[3]));
+    ui->lblTOut_0->setText(QString::number(fTemperature[0]));
+    ui->lblTOut_1->setText(QString::number(fTemperature[1]));
+    ui->lblTOut_2->setText(QString::number(fTemperature[2]));
+    ui->lblTOut_3->setText(QString::number(fTemperature[3]));
 
     // ui->brsMessage->setTextColor(QColor(0, 255, 0));
     ui->brsMessage->setFontWeight(QFont::Bold);
@@ -306,7 +308,7 @@ void FEEControlWin::PrintT()
     ui->brsMessage->setFontWeight(QFont::Normal);
     for (int i = 0; i < 4; i++)
     {
-        ui->brsMessage->append(tr("Group: %1, T: ").arg(i) + QString::number(temp[i]));
+        ui->brsMessage->append(tr("Group: %1, T: ").arg(i) + QString::number(fTemperature[i]));
     }
 }
 
@@ -824,6 +826,33 @@ void FEEControlWin::StopTempMeasure()
     flegend = NULL;
     fTempTimer.stop();
     tgPointCounter = 0;
+}
+
+#include <DBWindow.h>
+void FEEControlWin::ProcessCompOnce()
+{
+    if (!ui->cbxEnableComp->isChecked())
+    {
+        fCompTimer.stop();
+        fCompCounterdownTimer.stop();
+        return;
+    }
+    on_btnTMon_clicked();
+    if (!gDBWin->IsValid())
+    {
+        fCompTimer.stop();
+        fCompCounterdownTimer.stop();
+        ui->lblLEDDB->setStyleSheet("background-color:rgb(255,0,0)");
+        ui->cbxEnableComp->setChecked(false);
+        return;
+    }
+    Modify_SP_CITIROC_BiasDAC(gDBWin->GetCompBias(fCurrentBoardNo, fTemperature[0], fTemperature[1], fTemperature[2], fTemperature[3]));
+    fCompCurrentInterval = ui->timeTInterval->time();
+    ui->timeTCurrent->setTime(fCompCurrentInterval);
+    ui->timeTCountDown->setTime(fCompCurrentInterval);
+    fCompStartTime = QDateTime::currentDateTime();
+    fCompTimer.singleShot(fCompCurrentInterval.msecsSinceStartOfDay(), this, SLOT(handle_CompOnce()));
+    fCompCounterdownTimer.start(1000);
 }
 
 void FEEControlWin::on_btnHVON_clicked()
@@ -1929,3 +1958,19 @@ void FEEControlWin::on_btnDBWin_clicked()
     gDBWin->show();
 }
 
+void FEEControlWin::on_cbxEnableComp_stateChanged(int arg1)
+{
+    ProcessCompOnce();
+}
+
+void FEEControlWin::handle_CompOnce()
+{
+    ProcessCompOnce();
+}
+
+void FEEControlWin::handle_CompCountDown()
+{
+    auto finalTime = fCompStartTime.addMSecs(fCompCurrentInterval.msecsSinceStartOfDay());
+    auto remainMSecs = QDateTime::currentDateTime().msecsTo(finalTime);
+    ui->timeTCountDown->setTime(QTime::fromMSecsSinceStartOfDay(remainMSecs));
+}

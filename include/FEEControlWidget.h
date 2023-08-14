@@ -268,6 +268,15 @@ private:
     QTimer fTempTimer;
     TLegend *flegend;
 
+    // Temperature Compensation Control
+    double fTemperature[4];
+    QDateTime fCompStartTime;
+    QTime fCompCurrentInterval;
+    QTimer fCompTimer;
+    QTimer fCompCounterdownTimer;
+    double fCompStopTime;
+    void ProcessCompOnce();
+
 private slots:
     // FEE Board Control
     void on_btnConnect_clicked();
@@ -334,6 +343,11 @@ private slots:
     void on_btnStartTemp_clicked();
     void on_btnStopTemp_clicked();
     void on_btnDBWin_clicked();
+
+    // Temperature Compensation
+    void on_cbxEnableComp_stateChanged(int arg1);
+    void handle_CompOnce();
+    void handle_CompCountDown();
 };
 #define gFEEControlWin (FEEControlWin::Instance())
 

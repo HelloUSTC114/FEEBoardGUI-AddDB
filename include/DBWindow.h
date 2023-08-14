@@ -39,9 +39,10 @@ public:
 
     bool FileNameIsValid() { return fFileNameIsInput; }
     void SetHVBias(double hv) { fCurrentHV = hv; }
-    std::vector<std::pair<int, int>> GetCurrentCompBias(double temp0, double temp1, double temp2, double temp3); // Set bias = 200 at 25C
+    std::vector<std::pair<int, int>> GetCurrentCompBias(double temp0, double temp1, double temp2, double temp3);          // Set bias = 200 at 25C
     std::vector<std::pair<int, int>> GetCompBias(int feeBoardNo, double temp0, double temp1, double temp2, double temp3); // Set bias = 200 at 25C
 
+    bool IsValid();
 
 private slots:
     void on_btnDBFile_clicked();

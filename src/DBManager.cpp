@@ -709,7 +709,7 @@ void DBManager::Init(QString sDBName)
     for (; fDBQuery.next();)
     {
         count++;
-        // std::cout << count << '\t' << fDBQuery.value(0).toString().toStdString() << std::endl;
+        std::cout << count << '\t' << fDBQuery.value(0).toString().toStdString() << std::endl;
     }
     if (count < 9)
     {

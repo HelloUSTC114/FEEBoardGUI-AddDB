@@ -92,7 +92,7 @@ DBWindow::DBWindow(QWidget *parent) : QMainWindow(parent),
 void DBWindow::GetBoardListFromDB()
 {
     ClearList();
-    gDBManager->ReadFromDB();
+    gDBManager->ReadFromDB(fsFileName);
     auto feeList = gDBManager->GetFEEBoardLists();
     for (auto iter = feeList.begin(); iter != feeList.end(); iter++)
     {
@@ -192,6 +192,11 @@ std::vector<std::pair<int, int>> DBWindow::GetCompBias(int feeBoardNo, double te
         return rtnResult;
 
     return GetCurrentCompBias(temp0, temp1, temp2, temp3);
+}
+
+bool DBWindow::IsValid()
+{
+    return gDBManager->IsInitiated();
 }
 
 void DBWindow::on_btnDBFile_clicked()
