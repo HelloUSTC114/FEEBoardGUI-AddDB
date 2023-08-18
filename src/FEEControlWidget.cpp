@@ -744,6 +744,7 @@ void FEEControlWin::StartDAQInLoop()
 #include <TFile.h>
 #include <TGraph.h>
 #include <TLegend.h>
+#include <QDebug>
 void FEEControlWin::StartTempMeasure()
 {
     auto fileTimeStamp = QDateTime::currentDateTime();
@@ -774,9 +775,20 @@ void FEEControlWin::StartTempMeasure()
     gBoard->GetTemp(temp);
     for (int i = 0; i < 4; i++)
     {
+        ftMax = temp[i], ftMin = temp[i];
+        if (ftMax != 510)
+            break;
+    }
+
+    for (int i = 0; i < 4; i++)
+    {
+        tgTemp[i]->SetPoint(0, 0, temp[i]);
         if (temp[i] == 510)
             continue;
-        tgTemp[i]->SetPoint(0, 0, temp[i]);
+        if (temp[i] > ftMax)
+            ftMax = temp[i];
+        if (temp[i] < ftMin)
+            ftMin = temp[i];
     }
     tgTemp[0]->SetLineColor(kRed);
     tgTemp[1]->SetLineColor(kBlue);
@@ -789,22 +801,29 @@ void FEEControlWin::StartTempMeasure()
     {
         flegend->AddEntry(tgTemp[i], Form("Module %d", i));
     }
+    on_btnDraw_clicked();
     fdrawWin->cd();
     int drawID = 0;
-    for (; drawID < 4; drawID++)
-    {
-        if (temp[drawID] != 510)
-        {
-            tgTemp[drawID]->Draw("AZLP");
-            tgTemp[drawID]->GetYaxis()->SetRangeUser(15, 60);
-            break;
-        }
-    }
+    double tDev = ftMax - ftMin;
+    tgTemp[0]->Draw("AZLP");
+    tgTemp[0]->GetYaxis()->SetRangeUser(ftMin - 0.2 * tDev, ftMax + 0.2 * tDev);
+    drawID++;
+    // for (; drawID < 4; drawID++)
+    // {
+    //     // if (temp[drawID] != 510)
+    //     // {
+    //     tgTemp[drawID]->Draw("AZLP");
+    //     tgTemp[drawID]->GetYaxis()->SetRangeUser(0, 50);
+    //     qDebug() << "Drawing: " << drawID;
+    //     break;
+    //     // }
+    // }
     for (; drawID < 4; drawID++)
     {
         tgTemp[drawID]->Draw("LP same");
     }
     flegend->Draw("same");
+    fdrawWin->Update();
     fTempTimer.start(ui->timeTInterval->time().msecsSinceStartOfDay());
 }
 
@@ -1680,6 +1699,7 @@ void FEEControlWin::on_btnDraw_clicked()
     }
     if (fdrawWin && fdrawWin->isHidden())
     {
+        /// TODO: Memory leak here, no need to fix the bug
         // fdrawWin = new PlotWindow(*fdrawWin);
         fdrawWin = new ROOTDraw(*fdrawWin);
         // delete fWinList[0];
@@ -1926,17 +1946,29 @@ void FEEControlWin::on_btnClearCounter_clicked()
 void FEEControlWin::handle_TempMeasurement()
 {
     QDateTime timeNow = QDateTime::currentDateTime();
-    double sec = timeNow.msecsTo(fTempStartTime) / 1000.0;
+    double sec = fTempStartTime.msecsTo(timeNow) / 1000.0;
     gBoard->ReadTemp();
     double temp[4];
     gBoard->GetTemp(temp);
 
     for (int i = 0; i < 4; i++)
     {
+        tgTemp[i]->SetPoint(tgPointCounter, sec, temp[i]);
         if (temp[i] == 510)
             continue;
-        tgTemp[i]->SetPoint(tgPointCounter, sec, temp[i]);
+        if (temp[i] > ftMax)
+            ftMax = temp[i];
+        if (temp[i] < ftMin)
+            ftMin = temp[i];
     }
+    double tDev = ftMax - ftMin;
+    tgTemp[0]->Draw("AZLP");
+    tgTemp[0]->GetYaxis()->SetRangeUser(ftMin - 0.2 * tDev, ftMax + 0.2 * tDev);
+    for (int i = 1; i < 4; i++)
+    {
+        tgTemp[i]->Draw("LP same");
+    }
+    flegend->Draw("same");
     fdrawWin->Update();
     tgPointCounter++;
 
@@ -1960,7 +1992,7 @@ void FEEControlWin::on_btnStopTemp_clicked()
 #include "DBWindow.h"
 void FEEControlWin::on_btnDBWin_clicked()
 {
-//    gDBWin->setWindowFlag(Qt::WindowStaysOnTopHint, false);
+    //    gDBWin->setWindowFlag(Qt::WindowStaysOnTopHint, false);
     gDBWin->show();
     gDBWin->activateWindow();
     gDBWin->setParent(this);

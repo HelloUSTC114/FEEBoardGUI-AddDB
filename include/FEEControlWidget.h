@@ -267,6 +267,7 @@ private:
     TFile *fTempFile;
     QTimer fTempTimer;
     TLegend *flegend;
+    double ftMax = 0, ftMin = 0; // Record TMax TMin
 
     // Temperature Compensation Control
     double fTemperature[4];
