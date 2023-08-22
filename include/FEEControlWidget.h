@@ -65,6 +65,7 @@ public:
     ~FEEControlWin();
     static FEEControlWin *Instance(); // Forbidden create FEEControlWin by user
     void setParent(QWidget *parent = nullptr) { QWidget::setParent(parent); }
+    int GetBoardNo() { return fCurrentBoardNo; }
 
     //! TODO: In the future, this class should adapt to several boards connections.
     bool TryConnect(std::string sIP, int port);

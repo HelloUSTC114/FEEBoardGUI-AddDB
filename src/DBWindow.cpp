@@ -114,6 +114,7 @@ void DBWindow::ClearList()
 {
     vFEEBoardList.clear();
     vSiPMBoardList.clear();
+    vPairedInfo.clear();
     ui->listFEE->clear();
     ui->listSiPM->clear();
     ui->listPair->clear();
@@ -175,7 +176,7 @@ std::vector<std::pair<int, int>> DBWindow::GetCompBias(int feeBoardNo, double te
 {
     std::vector<std::pair<int, int>> rtnResult;
     for (int ch = 0; ch < 32; ch++)
-        rtnResult.push_back(std::pair<int, int>(ch, 200));
+        rtnResult.push_back(std::pair<int, int>(ch, fDefaultBias));
     if (!gDBManager->IsInitiated())
         return rtnResult;
 
@@ -463,15 +464,15 @@ int DBWindow::GetCompBias(double Temp, int ch)
         qDebug() << "Error: TSlope: " << tslope << "mV/C";
         qDebug() << "Setting at default compensation factor: 52mV/C";
         tslope = 52;
-        // return 200;
+        // return fDefaultBias;
     }
     double tdevi = (Temp - 25);
     double biasDevi = tdevi * tslope / 1000.0;
-    double voltage0 = feeRes->GetBias(ch, 200);
+    double voltage0 = feeRes->GetBias(ch, fDefaultBias);
 
-    int biasRes = 200;
+    int biasRes = fDefaultBias;
     if (biasDevi < 0)
-        for (int bias = 200; bias >= 0; bias--)
+        for (int bias = fDefaultBias; bias >= 0; bias--)
         {
             double voltage = feeRes->GetBias(ch, bias);
             // qDebug() << ch << '\t' << Temp << '\t' << bias << '\t' << (voltage - voltage0) * 1000 << '\t' << biasDevi;
@@ -482,7 +483,7 @@ int DBWindow::GetCompBias(double Temp, int ch)
             }
         }
     else
-        for (int bias = 200; bias < 256; bias++)
+        for (int bias = fDefaultBias; bias < 256; bias++)
         {
             double voltage = feeRes->GetBias(ch, bias);
             // qDebug() << ch << '\t' << Temp << '\t' << bias << '\t' << (voltage - voltage0) * 1000 << '\t' << biasDevi;
@@ -588,11 +589,12 @@ void DBWindow::on_btnCloseTComp_clicked()
     on_btnShow_clicked();
 }
 
+#include "FEEControlWidget.h"
 void DBWindow::on_btnTempComp_clicked()
 {
     double temp0 = ui->lineTemp0->text().toDouble();
     double temp1 = ui->lineTemp1->text().toDouble();
     double temp2 = ui->lineTemp2->text().toDouble();
     double temp3 = ui->lineTemp3->text().toDouble();
-    GetAllCompBias(temp0, temp1, temp2, temp3);
+    gFEEControlWin->Modify_SP_CITIROC_BiasDAC(GetCompBias(gFEEControlWin->GetBoardNo(), temp0, temp1, temp2, temp3));
 }

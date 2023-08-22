@@ -476,6 +476,7 @@ void FEEControlWin::ProcessDisconnect()
 
     ui->cbxEnableComp->setEnabled(false);
     on_cbxEnableComp_stateChanged(0);
+    on_btnStopTemp_clicked();
 }
 
 void FEEControlWin::handle_connectionBroken(int boardNo)
@@ -868,6 +869,8 @@ void FEEControlWin::ProcessCompOnce()
         ui->cbxEnableComp->setChecked(false);
         return;
     }
+    ui->lblLEDDB->setStyleSheet("background-color:rgb(0,255,0)");
+
     Modify_SP_CITIROC_BiasDAC(gDBWin->GetCompBias(fCurrentBoardNo, fTemperature[0], fTemperature[1], fTemperature[2], fTemperature[3]));
     fCompCurrentInterval = ui->timeTMonitor->time();
     ui->timeTCurrent->setTime(fCompCurrentInterval);

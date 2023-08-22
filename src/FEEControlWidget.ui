@@ -199,7 +199,7 @@
               <double>68.000000000000000</double>
              </property>
              <property name="value">
-              <double>56.000000000000000</double>
+              <double>57.000000000000000</double>
              </property>
             </widget>
            </item>
@@ -1696,8 +1696,8 @@
        <rect>
         <x>10</x>
         <y>30</y>
-        <width>261</width>
-        <height>111</height>
+        <width>190</width>
+        <height>98</height>
        </rect>
       </property>
       <property name="frameShape">
@@ -1706,91 +1706,57 @@
       <property name="frameShadow">
        <enum>QFrame::Raised</enum>
       </property>
-      <widget class="QLabel" name="label_50">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>10</y>
-         <width>81</width>
-         <height>16</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>Total time:</string>
-       </property>
-      </widget>
-      <widget class="QTimeEdit" name="timeTTotal">
-       <property name="geometry">
-        <rect>
-         <x>130</x>
-         <y>10</y>
-         <width>71</width>
-         <height>22</height>
-        </rect>
-       </property>
-       <property name="displayFormat">
-        <string>HH:mm:ss</string>
-       </property>
-      </widget>
-      <widget class="QLabel" name="label_51">
-       <property name="geometry">
-        <rect>
-         <x>20</x>
-         <y>50</y>
-         <width>81</width>
-         <height>16</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>Interval Time:</string>
-       </property>
-      </widget>
-      <widget class="QTimeEdit" name="timeTInterval">
-       <property name="geometry">
-        <rect>
-         <x>130</x>
-         <y>50</y>
-         <width>71</width>
-         <height>22</height>
-        </rect>
-       </property>
-       <property name="displayFormat">
-        <string>HH:mm:ss</string>
-       </property>
-       <property name="time">
-        <time>
-         <hour>0</hour>
-         <minute>0</minute>
-         <second>1</second>
-        </time>
-       </property>
-      </widget>
-      <widget class="QPushButton" name="btnStartTemp">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>80</y>
-         <width>91</width>
-         <height>24</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>Start T Meas</string>
-       </property>
-      </widget>
-      <widget class="QPushButton" name="btnStopTemp">
-       <property name="geometry">
-        <rect>
-         <x>130</x>
-         <y>80</y>
-         <width>101</width>
-         <height>24</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>Stop T Meas</string>
-       </property>
-      </widget>
+      <layout class="QGridLayout" name="gridLayout_33">
+       <item row="0" column="0">
+        <widget class="QLabel" name="label_50">
+         <property name="text">
+          <string>Total time:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QTimeEdit" name="timeTTotal">
+         <property name="displayFormat">
+          <string>HH:mm:ss</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="label_51">
+         <property name="text">
+          <string>Interval Time:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QTimeEdit" name="timeTInterval">
+         <property name="displayFormat">
+          <string>HH:mm:ss</string>
+         </property>
+         <property name="time">
+          <time>
+           <hour>0</hour>
+           <minute>0</minute>
+           <second>1</second>
+          </time>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QPushButton" name="btnStartTemp">
+         <property name="text">
+          <string>Start T Meas</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QPushButton" name="btnStopTemp">
+         <property name="text">
+          <string>Stop T Meas</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </widget>
     </widget>
    </widget>
