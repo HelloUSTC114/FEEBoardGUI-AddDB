@@ -54,3 +54,5 @@ Data*.txt
 test.cpp
 *-bck*
 *.db
+
+*.csv

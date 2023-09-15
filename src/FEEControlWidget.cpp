@@ -242,6 +242,8 @@ FEEControlWin::FEEControlWin(QWidget *parent)
 
     // Temperature Control
     connect(&fTempTimer, SIGNAL(timeout()), this, SLOT(handle_TempMeasurement()));
+    ui->btnStartTemp->setEnabled(1);
+    ui->btnStopTemp->setEnabled(0);
 
     // Temperature Compensation
     connect(&fCompCounterdownTimer, SIGNAL(timeout()), this, SLOT(handle_CompCountDown()));
@@ -476,7 +478,7 @@ void FEEControlWin::ProcessDisconnect()
 
     ui->cbxEnableComp->setEnabled(false);
     on_cbxEnableComp_stateChanged(0);
-    on_btnStopTemp_clicked();
+    fTempTimer.stop();
 }
 
 void FEEControlWin::handle_connectionBroken(int boardNo)
@@ -748,6 +750,8 @@ void FEEControlWin::StartDAQInLoop()
 #include <QDebug>
 void FEEControlWin::StartTempMeasure()
 {
+    if (fTempIsMeasuring)
+        return;
     auto fileTimeStamp = QDateTime::currentDateTime();
     QString fileName = "Temperature";
     QString fileNameTotal = fileName;
@@ -826,10 +830,15 @@ void FEEControlWin::StartTempMeasure()
     flegend->Draw("same");
     fdrawWin->Update();
     fTempTimer.start(ui->timeTInterval->time().msecsSinceStartOfDay());
+    fTempIsMeasuring = 1;
+    ui->btnStartTemp->setEnabled(0);
+    ui->btnStopTemp->setEnabled(1);
 }
 
 void FEEControlWin::StopTempMeasure()
 {
+    if (!fTempIsMeasuring)
+        return;
     fTempFile->cd();
     for (int i = 0; i < 4; i++)
     {
@@ -849,6 +858,10 @@ void FEEControlWin::StopTempMeasure()
     flegend = NULL;
     fTempTimer.stop();
     tgPointCounter = 0;
+
+    ui->btnStartTemp->setEnabled(1);
+    ui->btnStopTemp->setEnabled(0);
+    fTempIsMeasuring = 0;
 }
 
 #include <DBWindow.h>
@@ -1196,6 +1209,7 @@ void FEEControlWin::ForceStartDAQ(int nCount, QTime daqTime, int msBufferWaiting
     ui->boxLeastEvents->setValue(fDAQBufferLeastEvents);
 
     fDAQRuningFlag = 1;
+    gBoard->enable_tdc(1);
 
     QDateTime dateTime(QDateTime::currentDateTime()); // Start Message
     ui->brsMessage->setTextColor(blackColor);
@@ -1257,6 +1271,7 @@ void FEEControlWin::StopDAQ()
     {
         fDAQRuningFlag = 0;
         gBoard->SetFifoReadBreak();
+        gBoard->enable_tdc(0);
     }
 }
 

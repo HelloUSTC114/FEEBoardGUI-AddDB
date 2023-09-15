@@ -515,6 +515,12 @@
            </item>
            <item row="1" column="1">
             <widget class="QLabel" name="lblFileOut">
+             <property name="maximumSize">
+              <size>
+               <width>400</width>
+               <height>16777215</height>
+              </size>
+             </property>
              <property name="text">
               <string>FilePath</string>
              </property>
@@ -582,6 +588,12 @@
            </item>
            <item row="0" column="2">
             <widget class="QLineEdit" name="lineLiveCR">
+             <property name="maximumSize">
+              <size>
+               <width>500</width>
+               <height>16777215</height>
+              </size>
+             </property>
              <property name="readOnly">
               <bool>true</bool>
              </property>

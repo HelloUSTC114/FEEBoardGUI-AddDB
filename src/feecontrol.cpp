@@ -423,6 +423,11 @@ bool FEEControl::clean_queue(int queue_id)
     return true;
 }
 
+bool FEEControl::enable_tdc(bool flag)
+{
+    return write_reg_test(54, flag);
+}
+
 bool FEEControl::length_read(cmd_up cmd, int &len)
 {
     if (!start_socket())
@@ -979,6 +984,7 @@ bool FEEControl::BoardExit()
 
 #include <QtConcurrent/QtConcurrent>
 #include <General.h>
+#include "feecontrol.h"
 bool FEEControl::ReadFifo(int sleepms, int leastNEvents)
 {
     // test queue read

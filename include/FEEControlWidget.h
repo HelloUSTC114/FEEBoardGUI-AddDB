@@ -269,6 +269,7 @@ private:
     QTimer fTempTimer;
     TLegend *flegend;
     double ftMax = 0, ftMin = 0; // Record TMax TMin
+    bool fTempIsMeasuring = 0;
 
     // Temperature Compensation Control
     double fTemperature[4];
