@@ -314,6 +314,7 @@ void FEEControlWin::PrintT()
     }
 }
 
+#include "DBWindow.h"
 void FEEControlWin::PrintHV()
 {
     gBoard->HVMonitor();
@@ -321,6 +322,8 @@ void FEEControlWin::PrintHV()
     ui->lblVSetOut->setText(QString::number(hv.OV_set));
     ui->lblVMonOut->setText(QString::number(hv.OV_moni));
     ui->lblIMonOut->setText(QString::number(hv.OC_moni));
+    if(gDBWin)
+        gDBWin->SetCurrentPublicV(ui->boxHVSet->value());
 }
 
 void FEEControlWin::PrintClock()
@@ -2007,7 +2010,6 @@ void FEEControlWin::on_btnStopTemp_clicked()
     StopTempMeasure();
 }
 
-#include "DBWindow.h"
 void FEEControlWin::on_btnDBWin_clicked()
 {
     //    gDBWin->setWindowFlag(Qt::WindowStaysOnTopHint, false);

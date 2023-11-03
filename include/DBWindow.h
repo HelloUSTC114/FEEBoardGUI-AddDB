@@ -43,6 +43,7 @@ public:
     std::vector<std::pair<int, int>> GetCompBias(int feeBoardNo, double temp0, double temp1, double temp2, double temp3); // Set bias = 200 at 25C
 
     bool IsValid();
+    void SetCurrentPublicV(double v) { fCurrentHV = v; };
 
 private slots:
     void on_btnDBFile_clicked();
@@ -119,7 +120,7 @@ private:
     std::array<double, 32> fCurrentBD;          // SiPM Board Info
 
     // Bias Compensation Calculating
-    int fDefaultBias = 150;                                                                      // Set bias = 150 at 25C
+    int fDefaultBias = 150;                                                                         // Set bias = 150 at 25C
     int GetCompBias(double Temp, int ch);                                                           // Set bias = fDefaultBias at 25C
     std::array<double, 32> &GetAllCompBias(const std::array<double, 32> &temp);                     // Set bias = fDefaultBias at 25C
     std::array<double, 32> &GetAllCompBias(double temp0, double temp1, double temp2, double temp3); // Set bias = fDefaultBias at 25C
