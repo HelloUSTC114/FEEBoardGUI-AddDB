@@ -873,6 +873,29 @@ char *FEEControl::InitCMD(int length)
 //     WSACleanup();
 // }
 
+bool FEEControl::ReadT0TSCounter(uint32_t &t0id)
+{
+    int t0id_temp;
+    auto flag = read_reg_test(7, t0id_temp);
+    if (!flag)
+        return false;
+    t0id = (uint32_t)(t0id_temp);
+    return true;
+}
+
+bool FEEControl::ReadTimeStamp(uint32_t readCount, uint32_t *tsArray)
+{
+    int array[5];
+    for (int i = 0; i < readCount; i++)
+    {
+        auto flag = read_reg_test(42 + i, array[i]);
+        if (!flag)
+            return false;
+        tsArray[i] = (uint32_t)array[i];
+    }
+    return true;
+}
+
 bool FEEControl::TestConnect()
 {
     fConnectionFlag = true;

@@ -121,6 +121,8 @@ FEEControlWin::FEEControlWin(QWidget *parent)
     connect(&fDAQClock, &QTimer::timeout, this, &FEEControlWin::update_DAQClock);
     fDAQClock.setTimerType(Qt::VeryCoarseTimer);
 
+    connect(&fDAQClock, &QTimer::timeout, this, &FEEControlWin::handle_TSClock);
+
     ui->grpDAQctrl->setEnabled(false);
     fWorkThread3.start();
 
@@ -322,7 +324,7 @@ void FEEControlWin::PrintHV()
     ui->lblVSetOut->setText(QString::number(hv.OV_set));
     ui->lblVMonOut->setText(QString::number(hv.OV_moni));
     ui->lblIMonOut->setText(QString::number(hv.OC_moni));
-    if(gDBWin)
+    if (gDBWin)
         gDBWin->SetCurrentPublicV(ui->boxHVSet->value());
 }
 
@@ -1003,6 +1005,58 @@ void FEEControlWin::on_btnPath_clicked()
     ui->btnFileInit->setEnabled(false);
 }
 
+#include <fstream>
+bool FEEControlWin::ReadTimeStamp()
+{
+    auto flag = gBoard->ReadT0TSCounter(fCurrentT0ID);
+    if (!flag)
+        return false;
+
+    auto T0IDdev = fCurrentT0ID - fPreviousT0ID;
+    if (T0IDdev > 5)
+        T0IDdev = 5;
+
+    flag = gBoard->ReadTimeStamp(T0IDdev, fTimeStampArray);
+    if (!flag)
+        return false;
+    QLabel *labelList[5];
+    labelList[0] = ui->lblTS0;
+    labelList[1] = ui->lblTS1;
+    labelList[2] = ui->lblTS2;
+    labelList[3] = ui->lblTS3;
+    labelList[4] = ui->lblTS4;
+
+    // The loop aims at exchange number restore inside
+    for (int j = 0; j < 5 - T0IDdev; j++)
+    {
+        int idxPre = 4 - j - T0IDdev;
+        int idxPost = 4 - j;
+
+        auto tempString = labelList[idxPre]->text();
+        labelList[idxPost]->setText(tempString);
+        fTimeStampArrayStore[idxPost] = fTimeStampArray[idxPre];
+    }
+
+    // Restore data
+    for (int i = 0; i < T0IDdev; i++)
+    {
+        labelList[i]->setText(QString::number(fTimeStampArray[i]));
+        fTimeStampArrayStore[i] = fTimeStampArray[i];
+    }
+
+    // output into file
+    std::ofstream fout;
+    std::string outFileName = (std::string) "Board" + std::to_string(fCurrentBoardNo) + "TS.txt";
+    fout.open(outFileName, ios::app);
+    for (int i = 0; i < T0IDdev; i++)
+        fout << fTimeStampArray[T0IDdev - 1 - i] << std::endl;
+    fout.close();
+
+    fPreviousT0ID = fCurrentT0ID;
+
+    return flag;
+}
+
 bool FEEControlWin::GenerateROOTFile()
 {
     fFileTimeStamp = QDateTime::currentDateTime();
@@ -1150,6 +1204,11 @@ void FEEControlWin::update_DAQClock()
     ui->lineUnreadCount->setText(QString::number(gBoard->GetQueueGroupMonitor() * 20));
 }
 
+void FEEControlWin::handle_TSClock()
+{
+    ReadTimeStamp();
+}
+
 void FEEControlWin::on_btnDAQStart_clicked()
 {
     fsFileName = ui->lblFileName->text();
@@ -1212,7 +1271,9 @@ void FEEControlWin::ForceStartDAQ(int nCount, QTime daqTime, int msBufferWaiting
     ui->boxLeastEvents->setValue(fDAQBufferLeastEvents);
 
     fDAQRuningFlag = 1;
+#ifndef DISABLE_ENABLE_INDEPENDENT
     gBoard->enable_tdc(1);
+#endif
 
     QDateTime dateTime(QDateTime::currentDateTime()); // Start Message
     ui->brsMessage->setTextColor(blackColor);
@@ -1274,7 +1335,9 @@ void FEEControlWin::StopDAQ()
     {
         fDAQRuningFlag = 0;
         gBoard->SetFifoReadBreak();
+#ifndef DISABLE_ENABLE_INDEPENDENT
         gBoard->enable_tdc(0);
+#endif
     }
 }
 

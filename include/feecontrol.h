@@ -139,6 +139,18 @@ public:
     HVStatus GetHV() { return hv; } // Get HV Status
     // HV Control END
 
+    // Read register to get recent 5 T0 time stamp TDC value
+
+    /// @brief Read T0 time stamp counter from Board
+    /// @param [out] t0id T0 counter
+    /// @return flag
+    bool ReadT0TSCounter(uint32_t &t0id);
+
+    /// @brief Read Recent 5 T0 Time Stamp from register
+    /// @param tsArray [5], array with uint32_t, most recent lies in tsArray[0]
+    /// @return flag
+    bool ReadTimeStamp(uint32_t readCount, uint32_t *tsArray);
+
     // Other Board Status Monitor
     bool TestConnect();             // Test connnection of board, Warning: Only chance to set connection flag as true
     int BoardCheck();               // Check HV, citiroc, ad9635, si570, fifo information

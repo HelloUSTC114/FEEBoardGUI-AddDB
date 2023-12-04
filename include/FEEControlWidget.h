@@ -14,6 +14,9 @@
 #include <vector>
 #include <map>
 
+// Disable function: Enable TDC while DAQ start
+#define DISABLE_ENABLE_INDEPENDENT
+
 namespace UserDefine
 {
     struct DAQRequestInfo;
@@ -129,6 +132,7 @@ private slots:
     void handle_ContinousDraw();         // Handle draw slot
     void handle_DAQCount(int nDAQCount); // Handle DAQ Count
     void update_DAQClock();              // Handle DAQ Clock
+    void handle_TSClock();               // Handle Time Stamp Clock
 
 public slots:
     void handle_DAQRequest(UserDefine::DAQRequestInfo *); // Process DAQ signal
@@ -165,6 +169,14 @@ private:
     /// @param daqTime Count time for DAQ, 00:00:00.000 for forever
     /// @param msBufferWaiting Parameter for Socket communication, if buffer is not long enough, how long (in ms) should be wait.
     void ForceStartDAQ(int nCount, QTime daqTime, int msBufferWaiting, int leastBufferEvent = 30, bool fClearQueue = 1);
+
+    // Read T0 stamp while DAQ, using timer to control
+    uint32_t fCurrentT0ID = 0;
+    uint32_t fPreviousT0ID = 0;
+    // QTimer fTSClock; /// Time stamp timer use the same clock with fDAQClock
+    uint32_t fTimeStampArray[5]{0};
+    uint32_t fTimeStampArrayStore[5]{0};
+    bool ReadTimeStamp();
 
     // DAQ File Manager
     bool GenerateROOTFile(); // Generate root file
