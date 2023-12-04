@@ -16,6 +16,7 @@
 
 // Disable function: Enable TDC while DAQ start
 #define DISABLE_ENABLE_INDEPENDENT
+#define DISABLE_AUTODRAW_WHILE_DAQ
 
 namespace UserDefine
 {

@@ -1246,6 +1246,7 @@ bool FEEControlWin::TryStartDAQ(std::string sPath, std::string sFileName, int nD
     // Force DAQ start
     ForceStartDAQ(nDAQCount, DAQTime, msBufferSleep, leastBufferEvent, clearBeforeDAQ);
 
+#ifndef DISABLE_AUTODRAW_WHILE_DAQ
     // Draw Start
     on_btnStartDraw_clicked();
     QTimer::singleShot(500, this, SLOT(on_btnStartDraw_clicked()));
@@ -1253,6 +1254,7 @@ bool FEEControlWin::TryStartDAQ(std::string sPath, std::string sFileName, int nD
     gDataManager->Draw(ui->boxDrawCh->value(), (DrawOption)GetDrawOption());
     if (fdrawWin)
         fdrawWin->Update();
+#endif
 
     return true;
 }
