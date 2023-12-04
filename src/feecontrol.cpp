@@ -97,6 +97,7 @@ void FEEControl::InitPort(std::string ip, int port)
 void FEEControl::InitPort(uint8_t boardNo)
 {
     GenerateIP(boardNo, ip_address, fPort);
+    fBoardNum = boardNo;
 }
 
 FEEControl *&FEEControl::Instance()

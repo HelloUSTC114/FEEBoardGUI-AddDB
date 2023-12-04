@@ -8,7 +8,7 @@
 // commands table
 typedef enum
 {
-    up_exit = 0,
+    up_exit = 1,
     up_getSimpTemp,
     up_getHgFifoLen,
     up_getHgQueueLen,
