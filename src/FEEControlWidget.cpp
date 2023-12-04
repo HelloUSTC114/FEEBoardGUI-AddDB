@@ -1016,7 +1016,8 @@ bool FEEControlWin::ReadTimeStamp()
     if (T0IDdev > 5)
         T0IDdev = 5;
 
-    flag = gBoard->ReadTimeStamp(T0IDdev, fTimeStampArray);
+    uint32_t timeStampTemp[5];
+    flag = gBoard->ReadTimeStamp(T0IDdev, timeStampTemp);
     if (!flag)
         return false;
     QLabel *labelList[5];
@@ -1025,6 +1026,11 @@ bool FEEControlWin::ReadTimeStamp()
     labelList[2] = ui->lblTS2;
     labelList[3] = ui->lblTS3;
     labelList[4] = ui->lblTS4;
+
+    for (int i = 0; i < T0IDdev; i++)
+    {
+        fTimeStampArray[i] = DataManager::ConvertTDC2Time(timeStampTemp[5]);
+    }
 
     // The loop aims at exchange number restore inside
     for (int j = 0; j < 5 - T0IDdev; j++)

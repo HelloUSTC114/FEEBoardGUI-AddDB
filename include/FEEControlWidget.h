@@ -175,8 +175,8 @@ private:
     uint32_t fCurrentT0ID = 0;
     uint32_t fPreviousT0ID = 0;
     // QTimer fTSClock; /// Time stamp timer use the same clock with fDAQClock
-    uint32_t fTimeStampArray[5]{0};
-    uint32_t fTimeStampArrayStore[5]{0};
+    double fTimeStampArray[5]{0};
+    double fTimeStampArrayStore[5]{0};
     bool ReadTimeStamp();
 
     // DAQ File Manager
