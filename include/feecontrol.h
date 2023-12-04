@@ -149,7 +149,7 @@ public:
     /// @brief Read Recent 5 T0 Time Stamp from register
     /// @param tsArray [5], array with uint32_t, most recent lies in tsArray[0]
     /// @return flag
-    bool ReadTimeStamp(uint32_t readCount, uint32_t *tsArray);
+    bool ReadTimeStamp(uint32_t readCount, uint64_t *tsArray);
 
     // Other Board Status Monitor
     bool TestConnect();             // Test connnection of board, Warning: Only chance to set connection flag as true

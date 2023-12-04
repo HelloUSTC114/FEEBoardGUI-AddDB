@@ -494,7 +494,7 @@ void FEEControlWin::handle_connectionBroken(int boardNo)
 
 void FEEControlWin::on_btnConnect_clicked()
 {
-    // on_btnGenerateIP_clicked();
+     on_btnGenerateIP_clicked();
     // std::string ip = ui->lineIP->text().toStdString();
     // int port = ui->boxPort->value();
     // gBoard->InitPort(ip, port);
@@ -1016,7 +1016,7 @@ bool FEEControlWin::ReadTimeStamp()
     if (T0IDdev > 5)
         T0IDdev = 5;
 
-    uint32_t timeStampTemp[5];
+    uint64_t timeStampTemp[5];
     flag = gBoard->ReadTimeStamp(T0IDdev, timeStampTemp);
     if (!flag)
         return false;
@@ -1029,7 +1029,7 @@ bool FEEControlWin::ReadTimeStamp()
 
     for (int i = 0; i < T0IDdev; i++)
     {
-        fTimeStampArray[i] = DataManager::ConvertTDC2Time(timeStampTemp[5]);
+        fTimeStampArray[i] = DataManager::ConvertTDC2Time(timeStampTemp[i]);
     }
 
     // The loop aims at exchange number restore inside
@@ -1046,7 +1046,7 @@ bool FEEControlWin::ReadTimeStamp()
     // Restore data
     for (int i = 0; i < T0IDdev; i++)
     {
-        labelList[i]->setText(QString::number(fTimeStampArray[i]));
+        labelList[i]->setText(QString::number(fTimeStampArray[i] / 1e9));
         fTimeStampArrayStore[i] = fTimeStampArray[i];
     }
 
@@ -1055,7 +1055,11 @@ bool FEEControlWin::ReadTimeStamp()
     std::string outFileName = (std::string) "Board" + std::to_string(fCurrentBoardNo) + "TS.txt";
     fout.open(outFileName, ios::app);
     for (int i = 0; i < T0IDdev; i++)
-        fout << fTimeStampArray[T0IDdev - 1 - i] << std::endl;
+    {
+        char out_char[100];
+        sprintf(out_char, "%1.3f", fTimeStampArray[T0IDdev - 1 - i]);
+        fout << out_char << std::endl;
+    }
     fout.close();
 
     fPreviousT0ID = fCurrentT0ID;

@@ -883,15 +883,23 @@ bool FEEControl::ReadT0TSCounter(uint32_t &t0id)
     return true;
 }
 
-bool FEEControl::ReadTimeStamp(uint32_t readCount, uint32_t *tsArray)
+bool FEEControl::ReadTimeStamp(uint32_t readCount, uint64_t *tsArray)
 {
-    int array[5];
+    int array0[5];
+    int array1[5];
     for (int i = 0; i < readCount; i++)
     {
-        auto flag = read_reg_test(42 + i, array[i]);
+        auto flag = read_reg_test(42 + i * 2, array0[i]);
+        flag = read_reg_test(43 + i * 2, array1[i]);
         if (!flag)
             return false;
-        tsArray[i] = (uint32_t)array[i];
+        uint64_t temp = (uint64_t)array1[i] << 32;
+        tsArray[i] = temp + (uint64_t)array0[i];
+
+        // auto coarseTime = ((uint64_t)array1[i] << 16) + ((uint32_t)array0[i] >> 16);
+        // auto fineTime = (uint32_t)array0[i] & (0xffffU);
+        // double timeStamp = ((double)coarseTime - fineTime / 65536.0) / (433.7676181462 * 1e6);
+        // std::cout << (uint32_t)array1[i] << '\t' << (uint32_t)array0[i] << '\t' << coarseTime << '\t' << fineTime << '\t' << timeStamp << std::endl;
     }
     return true;
 }
