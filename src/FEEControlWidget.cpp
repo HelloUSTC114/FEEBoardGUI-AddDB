@@ -366,6 +366,10 @@ void FEEControlWin::PrintConnection(bool flag)
     ui->brsMessage->append(tr("Port: ") + QString::number(gBoard->GetPort()));
 }
 
+// if USER_DEFINE_BOARD_CONFIGURATION is defined, then: even boards: bottom board, odd boards: top board
+// send configuration files, using TOP/BOTTOM board, send logic 3, set HV at 57V
+#define USER_DEFINE_BOARD_CONFIGURATION
+
 void FEEControlWin::ProcessConnect()
 {
     ui->btnConnect->setEnabled(false);
@@ -416,6 +420,24 @@ void FEEControlWin::ProcessConnect()
     on_btnSendLogic_clicked();
     on_btnMask_clicked();
     bool parserFlag = gParser->Init();
+
+// if USER_DEFINE_BOARD_CONFIGURATION
+#ifdef USER_DEFINE_BOARD_CONFIGURATION
+    SelectLogic(3);
+    on_btnSendLogic_clicked();
+    if (fCurrentBoardNo % 2 == 0)
+    {
+        gParser->Init("../FEEBoardGUI-AddDB/Configuration/CRTest/TopLayer/sc_register_pd.txt", "../FEEBoardGUI-AddDB/Configuration/CRTest/TopLayer/probe_register.txt");
+    }
+    else
+    {
+        gParser->Init("../FEEBoardGUI-AddDB/Configuration/CRTest/BotLayer/sc_register_pd.txt", "../FEEBoardGUI-AddDB/Configuration/CRTest/BotLayer/probe_register.txt");
+    }
+    on_btnHVSet_clicked();
+    QString sFilePre = "Board" + QString::number(fCurrentBoardNo);
+    ui->lblFileName->setText(sFilePre);
+
+#endif
     if (parserFlag)
     {
         ui->brsMessage->setTextColor(greenColor);
@@ -494,7 +516,7 @@ void FEEControlWin::handle_connectionBroken(int boardNo)
 
 void FEEControlWin::on_btnConnect_clicked()
 {
-     on_btnGenerateIP_clicked();
+    on_btnGenerateIP_clicked();
     // std::string ip = ui->lineIP->text().toStdString();
     // int port = ui->boxPort->value();
     // gBoard->InitPort(ip, port);
@@ -1058,7 +1080,7 @@ bool FEEControlWin::ReadTimeStamp()
     {
         char out_char[100];
         sprintf(out_char, "%1.3f", fTimeStampArray[T0IDdev - 1 - i]);
-        fout << out_char << std::endl;
+        fout << fCurrentT0ID - T0IDdev + i << '\t' << out_char << std::endl;
     }
     fout.close();
 
@@ -1389,7 +1411,7 @@ int FEEControlWin::GetSelectLogic()
 
 void FEEControlWin::on_btnCITIROC_Path_clicked()
 {
-    sCITIROC_Config_Path = QFileDialog::getExistingDirectory(this, tr("Choosing CITIROC Configuration File Path"), QDir::currentPath() + "/../MuonTestControl/Configuration/");
+    sCITIROC_Config_Path = QFileDialog::getExistingDirectory(this, tr("Choosing CITIROC Configuration File Path"), QDir::currentPath() + "/../FEEBoardGUI-AddDB/Configuration/CRTest/");
     ui->lineCITIROC_Path->setText(sCITIROC_Config_Path);
     QDir dir(sCITIROC_Config_Path);
 
