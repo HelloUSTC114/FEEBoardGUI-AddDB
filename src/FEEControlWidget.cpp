@@ -368,7 +368,7 @@ void FEEControlWin::PrintConnection(bool flag)
 
 // if USER_DEFINE_BOARD_CONFIGURATION is defined, then: even boards: bottom board, odd boards: top board
 // send configuration files, using TOP/BOTTOM board, send logic 3, set HV at 57V
-#define USER_DEFINE_BOARD_CONFIGURATION
+#define USERDEFINE_BOARD_CONFIGURATION
 
 void FEEControlWin::ProcessConnect()
 {
@@ -1031,18 +1031,21 @@ void FEEControlWin::on_btnPath_clicked()
 #include <fstream>
 bool FEEControlWin::ReadTimeStamp()
 {
-    auto flag = gBoard->ReadT0TSCounter(fCurrentT0ID);
-    if (!flag)
-        return false;
+    // auto flag = gBoard->ReadT0TSCounter(fCurrentT0ID);
+    // if (!flag)
+    //     return false;
 
-    auto T0IDdev = fCurrentT0ID - fPreviousT0ID;
-    if (T0IDdev > 5)
-        T0IDdev = 5;
+    // auto T0IDdev = fCurrentT0ID - fPreviousT0ID;
+    // if (T0IDdev > 5)
+    //     T0IDdev = 5;
 
     uint64_t timeStampTemp[5];
-    flag = gBoard->ReadTimeStamp(T0IDdev, timeStampTemp);
-    if (!flag)
-        return false;
+    // flag = gBoard->ReadTimeStamp(T0IDdev, timeStampTemp);
+    // if (!flag)
+    //     return false;
+
+    int T0IDdev = gBoard->ReadTimeStamp(timeStampTemp);
+    auto flag = T0IDdev > 0;
     QLabel *labelList[5];
     labelList[0] = ui->lblTS0;
     labelList[1] = ui->lblTS1;

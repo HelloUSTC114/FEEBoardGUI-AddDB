@@ -890,7 +890,7 @@ bool FEEControl::ReadTimeStamp(uint32_t readCount, uint64_t *tsArray)
     for (int i = 0; i < readCount; i++)
     {
         auto flag = read_reg_test(42 + i * 2, array0[i]);
-        flag = read_reg_test(43 + i * 2, array1[i]);
+        flag &= read_reg_test(43 + i * 2, array1[i]);
         if (!flag)
             return false;
         uint64_t temp = (uint64_t)array1[i] << 32;
@@ -902,6 +902,31 @@ bool FEEControl::ReadTimeStamp(uint32_t readCount, uint64_t *tsArray)
         // std::cout << (uint32_t)array1[i] << '\t' << (uint32_t)array0[i] << '\t' << coarseTime << '\t' << fineTime << '\t' << timeStamp << std::endl;
     }
     return true;
+}
+
+int FEEControl::ReadTimeStamp(uint64_t *tsArray)
+{
+    uint32_t t0id0;
+
+    auto flag = ReadT0TSCounter(t0id0);
+    for (;;)
+    {
+        auto T0IDdev = fCurrentT0ID - fPreviousT0ID;
+        if (T0IDdev > 5)
+            T0IDdev = 5;
+
+        flag &= gBoard->ReadTimeStamp(T0IDdev, tsArray);
+        flag &= ReadT0TSCounter(fCurrentT0ID);
+        if (!flag)
+            break;
+        if ((fCurrentT0ID == t0id0))
+        {
+            fPreviousT0ID = fCurrentT0ID;
+            return T0IDdev;
+        }
+        t0id0 = fCurrentT0ID;
+    }
+    return -1;
 }
 
 bool FEEControl::TestConnect()

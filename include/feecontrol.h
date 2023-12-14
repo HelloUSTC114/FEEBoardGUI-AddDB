@@ -151,6 +151,11 @@ public:
     /// @return flag
     bool ReadTimeStamp(uint32_t readCount, uint64_t *tsArray);
 
+    /// @brief Read Recent 5 T0 Time Stamp from register
+    /// @param tsArray [5], array with uint32_t, most recent lies in tsArray[0]
+    /// @return how many T0 Time Stamp read
+    int ReadTimeStamp(uint64_t *tsArray);
+
     // Other Board Status Monitor
     bool TestConnect();             // Test connnection of board, Warning: Only chance to set connection flag as true
     int BoardCheck();               // Check HV, citiroc, ad9635, si570, fifo information
@@ -269,6 +274,9 @@ private:
 
     int fifoReadCount = 0;        // fifo read counter
     volatile bool fBreakFlag = 0; // fifo read break flag
+
+    uint32_t fCurrentT0ID = 0;  // Current T0 id for the board;
+    uint32_t fPreviousT0ID = 0; // Previous T0 id for the board;
 
 public:
     static const int fMaxSaveEvents;  // Limit of save events
