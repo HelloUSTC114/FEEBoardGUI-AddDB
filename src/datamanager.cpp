@@ -21,7 +21,7 @@ int DataManager::fTDCLengthFactor = FEEControl::fTDCPointFactor / sizeof(uint16_
 double DataManager::ConvertTDC2Time(uint64_t tdc, double &coarseTime, double &fineTime)
 {
     coarseTime = (tdc >> 16) / fgFreq * 1e3;
-    fineTime = (tdc & 0xffff) / 65536.0 / fgFreq * 1e3;
+    fineTime = (tdc & 0xffffU) / 65536.0 / fgFreq * 1e3;
     return (coarseTime - fineTime);
 }
 

@@ -422,7 +422,7 @@ void FEEControlWin::ProcessConnect()
     bool parserFlag = gParser->Init();
 
 // if USER_DEFINE_BOARD_CONFIGURATION
-#ifdef USER_DEFINE_BOARD_CONFIGURATION
+#ifdef USERDEFINE_BOARD_CONFIGURATION
     SelectLogic(3);
     on_btnSendLogic_clicked();
     if (fCurrentBoardNo % 2 == 0)
@@ -1044,7 +1044,7 @@ bool FEEControlWin::ReadTimeStamp()
     // if (!flag)
     //     return false;
 
-    int T0IDdev = gBoard->ReadTimeStamp(timeStampTemp);
+    int T0IDdev = gBoard->ReadTimeStamp(timeStampTemp, fCurrentT0ID);
     auto flag = T0IDdev > 0;
     QLabel *labelList[5];
     labelList[0] = ui->lblTS0;
@@ -1084,7 +1084,7 @@ bool FEEControlWin::ReadTimeStamp()
     {
         char out_char[100];
         sprintf(out_char, "%1.3f", fTimeStampArray[T0IDdev - 1 - i]);
-        fout << fCurrentT0ID - T0IDdev + i << '\t' << out_char << std::endl;
+        fout << fCurrentT0ID << '\t' << T0IDdev << '\t' << out_char << std::endl;
     }
     fout.close();
 
@@ -1282,7 +1282,7 @@ bool FEEControlWin::TryStartDAQ(std::string sPath, std::string sFileName, int nD
     // Force DAQ start
     ForceStartDAQ(nDAQCount, DAQTime, msBufferSleep, leastBufferEvent, clearBeforeDAQ);
 
-#ifndef DISABLE_AUTODRAW_WHILE_DAQ
+#ifndef USERDEFINE_DISABLE_AUTODRAW_WHILE_DAQ
     // Draw Start
     on_btnStartDraw_clicked();
     QTimer::singleShot(500, this, SLOT(on_btnStartDraw_clicked()));
@@ -1309,7 +1309,7 @@ void FEEControlWin::ForceStartDAQ(int nCount, QTime daqTime, int msBufferWaiting
     ui->boxLeastEvents->setValue(fDAQBufferLeastEvents);
 
     fDAQRuningFlag = 1;
-#ifndef DISABLE_ENABLE_INDEPENDENT
+#ifndef USERDEFINE_DISABLE_ENABLE_INDEPENDENT
     gBoard->enable_tdc(1);
 #endif
 
@@ -1373,7 +1373,7 @@ void FEEControlWin::StopDAQ()
     {
         fDAQRuningFlag = 0;
         gBoard->SetFifoReadBreak();
-#ifndef DISABLE_ENABLE_INDEPENDENT
+#ifndef USERDEFINE_DISABLE_ENABLE_INDEPENDENT
         gBoard->enable_tdc(0);
 #endif
     }

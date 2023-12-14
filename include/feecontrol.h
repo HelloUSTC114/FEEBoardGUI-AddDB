@@ -155,6 +155,7 @@ public:
     /// @param tsArray [5], array with uint32_t, most recent lies in tsArray[0]
     /// @return how many T0 Time Stamp read
     int ReadTimeStamp(uint64_t *tsArray);
+    int ReadTimeStamp(uint64_t *tsArray, uint32_t &t0id);
 
     // Other Board Status Monitor
     bool TestConnect();             // Test connnection of board, Warning: Only chance to set connection flag as true

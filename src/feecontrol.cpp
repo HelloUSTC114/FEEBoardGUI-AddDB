@@ -887,6 +887,7 @@ bool FEEControl::ReadTimeStamp(uint32_t readCount, uint64_t *tsArray)
 {
     int array0[5];
     int array1[5];
+    // std::ofstream fout("TestTS.txt", std::ios::app);
     for (int i = 0; i < readCount; i++)
     {
         auto flag = read_reg_test(42 + i * 2, array0[i]);
@@ -904,16 +905,21 @@ bool FEEControl::ReadTimeStamp(uint32_t readCount, uint64_t *tsArray)
     return true;
 }
 
+#include <fstream>
 int FEEControl::ReadTimeStamp(uint64_t *tsArray)
 {
     uint32_t t0id0;
+    // std::ofstream fout("TestTS.txt", std::ios::app);
 
     auto flag = ReadT0TSCounter(t0id0);
+    fCurrentT0ID = t0id0;
     for (;;)
     {
         auto T0IDdev = fCurrentT0ID - fPreviousT0ID;
         if (T0IDdev > 5)
             T0IDdev = 5;
+        if (T0IDdev == 0)
+            return T0IDdev;
 
         flag &= gBoard->ReadTimeStamp(T0IDdev, tsArray);
         flag &= ReadT0TSCounter(fCurrentT0ID);
@@ -922,11 +928,19 @@ int FEEControl::ReadTimeStamp(uint64_t *tsArray)
         if ((fCurrentT0ID == t0id0))
         {
             fPreviousT0ID = fCurrentT0ID;
+            // fout << '\t' << T0IDdev << '\t' << fCurrentT0ID << std::endl;
             return T0IDdev;
         }
         t0id0 = fCurrentT0ID;
     }
     return -1;
+}
+
+int FEEControl::ReadTimeStamp(uint64_t *tsArray, uint32_t &t0id)
+{
+    auto rtn = ReadTimeStamp(tsArray);
+    t0id = fCurrentT0ID;
+    return rtn;
 }
 
 bool FEEControl::TestConnect()
