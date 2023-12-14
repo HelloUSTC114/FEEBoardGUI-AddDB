@@ -887,7 +887,6 @@ bool FEEControl::ReadTimeStamp(uint32_t readCount, uint64_t *tsArray)
 {
     int array0[5];
     int array1[5];
-    // std::ofstream fout("TestTS.txt", std::ios::app);
     for (int i = 0; i < readCount; i++)
     {
         auto flag = read_reg_test(42 + i * 2, array0[i]);
@@ -895,7 +894,7 @@ bool FEEControl::ReadTimeStamp(uint32_t readCount, uint64_t *tsArray)
         if (!flag)
             return false;
         uint64_t temp = (uint64_t)array1[i] << 32;
-        tsArray[i] = temp + (uint64_t)array0[i];
+        tsArray[i] = temp + (uint32_t)array0[i];
 
         // auto coarseTime = ((uint64_t)array1[i] << 16) + ((uint32_t)array0[i] >> 16);
         // auto fineTime = (uint32_t)array0[i] & (0xffffU);
@@ -905,7 +904,6 @@ bool FEEControl::ReadTimeStamp(uint32_t readCount, uint64_t *tsArray)
     return true;
 }
 
-#include <fstream>
 int FEEControl::ReadTimeStamp(uint64_t *tsArray)
 {
     uint32_t t0id0;
