@@ -436,6 +436,7 @@ void FEEControlWin::ProcessConnect()
     on_btnHVSet_clicked();
     QString sFilePre = "Board" + QString::number(fCurrentBoardNo);
     ui->lblFileName->setText(sFilePre);
+    ui->boxClearQueue->setChecked(1);
 
 #endif
     if (parserFlag)
