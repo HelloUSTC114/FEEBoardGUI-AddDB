@@ -893,8 +893,10 @@ bool FEEControl::ReadTimeStamp(uint32_t readCount, uint64_t *tsArray)
         flag &= read_reg_test(43 + i * 2, array1[i]);
         if (!flag)
             return false;
-        uint64_t temp = (uint64_t)array1[i] << 32;
-        tsArray[i] = temp + (uint32_t)array0[i];
+        uint32_t t0 = (uint32_t)array0[i];
+        uint32_t t1 = (uint32_t)array1[i];
+        uint64_t temp = (uint64_t)t1 << 32;
+        tsArray[i] = temp + t0;
 
         // auto coarseTime = ((uint64_t)array1[i] << 16) + ((uint32_t)array0[i] >> 16);
         // auto fineTime = (uint32_t)array0[i] & (0xffffU);
