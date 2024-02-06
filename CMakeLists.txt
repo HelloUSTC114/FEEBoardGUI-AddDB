@@ -14,6 +14,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # User defined library option
 set(USE_VISA ON)
 set(USE_ZABER ON)
+set(USE_VLD_CHECK OFF)
+
+# Define Macros, enable/disable some functions 
+set(DISABLE_AUTO_ENABLE_TDC ON)
+set(DISABLE_AUTO_DRAW_WHILE_DAQ ON)
 
 find_package(QT NAMES Qt5 REQUIRED COMPONENTS Widgets Sql Concurrent)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Sql)
@@ -33,8 +38,9 @@ link_libraries(
 )
 # link_libraries(Qt5::Sql)
 
+set (FEEDISTRIMAIN main.cpp)
+
 set(PROJECT_SOURCES
-    main.cpp
 
     ${sources}
     ${headers}
@@ -105,32 +111,62 @@ if(USE_VISA)
     add_definitions(-DUSE_VISA_CONTROL)
 endif()
 
-if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
-    qt_add_executable(FEEDistri
-        MANUAL_FINALIZATION
-        ${PROJECT_SOURCES}
-    )
-
-# Define target properties for Android with Qt 6 as:
-# set_property(TARGET FEEDistri APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
-# ${CMAKE_CURRENT_SOURCE_DIR}/android)
-# For more information, see https://doc.qt.io/qt-6/qt-add-executable.html#target-creation
-else()
-    if(ANDROID)
-        add_library(FEEDistri SHARED
-            ${PROJECT_SOURCES}
-        )
-
-    # Define properties for Android with Qt 5 after find_package() calls as:
-    # set(ANDROID_PACKAGE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android")
-    else()
-        add_executable(FEEDistri
-            ${PROJECT_SOURCES}
-        )
-    endif()
+# USE VLD for memeory check
+if(USE_VLD_CHECK)
+    add_definitions(-DUSE_VLD_MEMORYCHECK)
+    set(VLD_PATH "C:/Program\ Files\ (x86)/Visual\ Leak\ Detector")
+    set(VLD_INCLUDE "${VLD_PATH}/include")
+    set(VLD_LIB "${VLD_PATH}/lib/Win64/vld.lib")
+    include_directories((${VLD_INCLUDE}))
+    find_library(VLD_LIB vld.lib ${VLD_PATH}"/lib/Win64/vld.lib")
+    link_libraries(${VLD_LIB} )
 endif()
 
+# USER defined, used to enable/disable some functions
+if(DISABLE_AUTO_ENABLE_TDC)
+    add_definitions(-DUSERDEFINE_DISABLE_ENABLE_INDEPENDENT)
+endif()
+if(DISABLE_AUTO_DRAW_WHILE_DAQ)
+    add_definitions(-DUSERDEFINE_DISABLE_AUTODRAW_WHILE_DAQ)
+endif()
+
+# add_library(FEEGUI SHARED ${PROJECT_SOURCES})
+# set_target_properties(FEEGUI PROPERTIES OUTPUT_NAME "FEEGUI")
+# set (LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib)
+
+add_executable(FEEDistri ${FEEDISTRIMAIN} ${PROJECT_SOURCES})
+add_executable(EnableTDC EnableTDC.cpp ${PROJECT_SOURCES})
+
+
+# if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
+#     qt_add_executable(FEEDistri
+#         MANUAL_FINALIZATION
+#         ${PROJECT_SOURCES}
+#     )
+
+
+# # Define target properties for Android with Qt 6 as:
+# # set_property(TARGET FEEDistri APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
+# # ${CMAKE_CURRENT_SOURCE_DIR}/android)
+# # For more information, see https://doc.qt.io/qt-6/qt-add-executable.html#target-creation
+# else()
+#     if(ANDROID)
+#         add_library(FEEDistri SHARED
+#         ${PROJECT_SOURCES}
+#         )
+
+#     # Define properties for Android with Qt 5 after find_package() calls as:
+#     # set(ANDROID_PACKAGE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android")
+#     else()
+#         add_executable(FEEDistri
+#         ${PROJECT_SOURCES}
+#         )
+#     endif()
+# endif()
+
 target_link_libraries(FEEDistri PRIVATE Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Sql
+)
+target_link_libraries(EnableTDC PRIVATE Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Sql
 )
 
 set_target_properties(FEEDistri PROPERTIES

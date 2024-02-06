@@ -15,8 +15,8 @@
 #include <map>
 
 // Disable function: Enable TDC while DAQ start
-#define USERDEFINE_DISABLE_ENABLE_INDEPENDENT
-#define USERDEFINE_DISABLE_AUTODRAW_WHILE_DAQ
+// #define USERDEFINE_DISABLE_ENABLE_INDEPENDENT
+// #define USERDEFINE_DISABLE_AUTODRAW_WHILE_DAQ
 
 namespace UserDefine
 {

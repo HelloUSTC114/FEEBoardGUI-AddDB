@@ -34,6 +34,11 @@
 #include <TGraphErrors.h>
 #include <TStyle.h>
 #include <TF1.h>
+
+#ifdef USE_VLD_MEMORYCHECK
+#include "vld.h"
+#endif
+
 int main(int argc, char *argv[])
 {
     // ReadAmpCaliFile(0, hg);

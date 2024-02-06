@@ -9,11 +9,13 @@
 #include "FEEControlWidget.h"
 #include "DBManager.h"
 
+#include <iostream>
 DBWindow::DBWindow(QWidget *parent) : QMainWindow(parent),
                                       ui(new Ui::DBWindow)
 {
     ui->setupUi(this);
     //    setWindowFlag()
+    std::cout << "DEBUG JOHN--------------------" << std::endl;
 
     sipmRes = new SiPMTestResult();
     feeRes = new BoardTestResult();
