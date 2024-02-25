@@ -1485,3 +1485,7 @@ QtUserConnectionMonitor *QtUserConnectionMonitor::Instance()
     return instance;
 }
 #endif
+
+void FEEList::ScanBoard()
+{
+}
