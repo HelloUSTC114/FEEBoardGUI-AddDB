@@ -61,24 +61,24 @@ void DAQRuning::startDAQ(FEEControlWin *w)
     // Clear queue before DAQ Start
     if (w->fFlagClearQueue)
     {
-        gBoard->clean_queue(0);
-        gBoard->clean_queue(1);
-        gBoard->clean_queue(2);
-        gBoard->clean_queue(3);
+        (w->GetBoard())->clean_queue(0);
+        (w->GetBoard())->clean_queue(1);
+        (w->GetBoard())->clean_queue(2);
+        (w->GetBoard())->clean_queue(3);
     }
 
     bool loopFlag = JudgeLoopFlag(w, 0);
     for (nDAQLoop = 0; loopFlag; nDAQLoop++)
     {
         // clock_t test1 = clock();
-        auto rtnRead = gBoard->ReadFifo(w->fDAQBufferSleepms, w->fDAQBufferLeastEvents);
+        auto rtnRead = (w->GetBoard())->ReadFifo(w->fDAQBufferSleepms, w->fDAQBufferLeastEvents);
         // clock_t test2 = clock();
         if (!rtnRead)
             break;
-        nDAQEventCount += gDataManager->ProcessFEEData(gBoard);
+        nDAQEventCount += w->GetDataManager()->ProcessFEEData((w->GetBoard()));
         // clock_t test3 = clock();
 
-        emit UpdateDAQCount(gDataManager->GetHGTotalCount());
+        emit UpdateDAQCount(w->GetDataManager()->GetHGTotalCount());
 
         loopFlag = JudgeLoopFlag(w, nDAQEventCount);
         // std::cout << "Clocks: " << test2 - test1 << '\t' << test3 - test2 << std::endl;
@@ -95,6 +95,9 @@ FEEControlWin::FEEControlWin(QWidget *parent)
     // Connection Process
     connect(gFEEMonitor, &QtUserConnectionMonitor::connectionBroken, this, &FEEControlWin::handle_connectionBroken);
 #endif
+    // FEE Board Control Init
+    fBoard = new FEEControl();
+    fDataManager = new DataManager();
 
     // FEE control Tab
     ui->btnExit->setEnabled(false);
@@ -216,7 +219,7 @@ FEEControlWin::FEEControlWin(QWidget *parent)
         fcbChannelMask[i]->setChecked(false);
         ui->gridChs->addWidget(fcbChannelMask[i], i + 1, 6, 1, 1);
         ui->gridChs->setAlignment(fcbChannelMask[i], Qt::AlignHCenter);
-        gBoard->GenerateChMask(i, 0, fChannelMasks);
+        fBoard->GenerateChMask(i, 0, fChannelMasks);
     }
 
     // FEE Masks control
@@ -272,6 +275,10 @@ FEEControlWin *FEEControlWin::Instance()
 
 FEEControlWin::~FEEControlWin()
 {
+    if (fBoard)
+        delete fBoard;
+    if (fDataManager)
+        delete fDataManager;
     fWorkThread3.quit();
     fWorkThread3.wait();
 
@@ -296,8 +303,8 @@ FEEControlWin::~FEEControlWin()
 // FEE Control
 void FEEControlWin::PrintT()
 {
-    gBoard->ReadTemp();
-    gBoard->GetTemp(fTemperature);
+    fBoard->ReadTemp();
+    fBoard->GetTemp(fTemperature);
 
     ui->lblTOut_0->setText(QString::number(fTemperature[0]));
     ui->lblTOut_1->setText(QString::number(fTemperature[1]));
@@ -319,8 +326,8 @@ void FEEControlWin::PrintT()
 #include "DBWindow.h"
 void FEEControlWin::PrintHV()
 {
-    gBoard->HVMonitor();
-    auto hv = gBoard->GetHV();
+    fBoard->HVMonitor();
+    auto hv = fBoard->GetHV();
     ui->lblVSetOut->setText(QString::number(hv.OV_set));
     ui->lblVMonOut->setText(QString::number(hv.OV_moni));
     ui->lblIMonOut->setText(QString::number(hv.OC_moni));
@@ -330,7 +337,7 @@ void FEEControlWin::PrintHV()
 
 void FEEControlWin::PrintClock()
 {
-    double freq = gBoard->ReadFreq();
+    double freq = fBoard->ReadFreq();
     ui->lblSi570Out->setText(QString::number(freq));
 
     ui->brsMessage->setFontWeight(QFont::Bold);
@@ -352,8 +359,8 @@ void FEEControlWin::PrintConnection(bool flag)
         return;
     }
 
-    ui->lblIPOut->setText(tr(gBoard->GetIP().c_str()));
-    ui->lblPortOut->setText(QString::number(gBoard->GetPort()));
+    ui->lblIPOut->setText(tr(fBoard->GetIP().c_str()));
+    ui->lblPortOut->setText(QString::number(fBoard->GetPort()));
     ui->lblBoardOut->setText(QString::number(fCurrentBoardNo));
 
     ui->brsMessage->setTextColor(QColor(0, 255, 0));
@@ -362,8 +369,8 @@ void FEEControlWin::PrintConnection(bool flag)
 
     ui->brsMessage->setTextColor(QColor(0, 0, 0));
     ui->brsMessage->setFontWeight(QFont::Normal);
-    ui->brsMessage->append(tr("IP: ") + QString::fromStdString(gBoard->GetIP()));
-    ui->brsMessage->append(tr("Port: ") + QString::number(gBoard->GetPort()));
+    ui->brsMessage->append(tr("IP: ") + QString::fromStdString(fBoard->GetIP()));
+    ui->brsMessage->append(tr("Port: ") + QString::number(fBoard->GetPort()));
 }
 
 // if USER_DEFINE_BOARD_CONFIGURATION is defined, then: even boards: bottom board, odd boards: top board
@@ -392,7 +399,7 @@ void FEEControlWin::ProcessConnect()
     ui->tabCITIROC->setEnabled(true);
 
     // Init File manager
-    if (!gDataManager->IsOpen())
+    if (!fDataManager->IsOpen())
     {
         // ui->grpDAQStart->setEnabled(false);
         ui->grpDAQStart->setEnabled(true);
@@ -486,7 +493,7 @@ void FEEControlWin::ProcessDisconnect()
     ui->tabCITIROC->setEnabled(false);
 
     // Init File manager
-    if (!gDataManager->IsOpen())
+    if (!fDataManager->IsOpen())
     {
         // ui->grpDAQStart->setEnabled(false);
         ui->grpDAQStart->setEnabled(false);
@@ -520,17 +527,17 @@ void FEEControlWin::on_btnConnect_clicked()
     on_btnGenerateIP_clicked();
     // std::string ip = ui->lineIP->text().toStdString();
     // int port = ui->boxPort->value();
-    // gBoard->InitPort(ip, port);
+    // fBoard->InitPort(ip, port);
 
     fCurrentBoardNo = ui->boxBoardNo->value();
-    gBoard->InitPort(fCurrentBoardNo);
+    fBoard->InitPort(fCurrentBoardNo);
     ui->brsMessage->setTextColor(QColor(0, 0, 0));
     ui->brsMessage->setFontWeight(QFont::Bold);
     ui->brsMessage->append("Try to connect: ");
     ui->brsMessage->setFontWeight(QFont::Normal);
-    ui->brsMessage->append(QString::fromStdString(gBoard->GetIP()) + ":" + QString::number(gBoard->GetPort()));
+    ui->brsMessage->append(QString::fromStdString(fBoard->GetIP()) + ":" + QString::number(fBoard->GetPort()));
 
-    fConnected = gBoard->TestConnect();
+    fConnected = fBoard->TestConnect();
     PrintConnection(fConnected);
     if (fConnected)
     {
@@ -803,9 +810,9 @@ void FEEControlWin::StartTempMeasure()
     }
     // Measure T at once
     fTempStartTime = QDateTime::currentDateTime();
-    gBoard->ReadTemp();
+    fBoard->ReadTemp();
     double temp[4];
-    gBoard->GetTemp(temp);
+    fBoard->GetTemp(temp);
     for (int i = 0; i < 4; i++)
     {
         ftMax = temp[i], ftMin = temp[i];
@@ -923,7 +930,7 @@ void FEEControlWin::ProcessCompOnce()
 
 void FEEControlWin::on_btnHVON_clicked()
 {
-    gBoard->HVON();
+    fBoard->HVON();
     QTimer::singleShot(2000, this, SLOT(on_btnHPO_clicked()));
 }
 
@@ -934,19 +941,19 @@ void FEEControlWin::on_btnHPO_clicked()
 
 void FEEControlWin::on_btnHVOFF_clicked()
 {
-    gBoard->HVOFF();
+    fBoard->HVOFF();
     QTimer::singleShot(2000, this, SLOT(on_btnHPO_clicked()));
 }
 
 void FEEControlWin::on_btnHVSet_clicked()
 {
-    gBoard->HVSet(ui->boxHVSet->value());
+    fBoard->HVSet(ui->boxHVSet->value());
     QTimer::singleShot(2000, this, SLOT(on_btnHPO_clicked()));
 }
 
 void FEEControlWin::on_btnRegTest_clicked()
 {
-    gBoard->TestReg();
+    fBoard->TestReg();
     PrintClock();
 }
 
@@ -967,7 +974,7 @@ void FEEControlWin::on_btnGenerateIP_clicked()
 void FEEControlWin::on_btnExit_clicked()
 {
     ProcessDisconnect();
-    gBoard->BoardExit();
+    fBoard->BoardExit();
 
     ui->brsMessage->setTextColor(greenColor);
     ui->brsMessage->setFontWeight(QFont::Bold);
@@ -990,8 +997,8 @@ void FEEControlWin::RetrieveCountOnce()
 
     uint32_t realCount = 0;
     uint32_t liveCount = 0;
-    gBoard->get_real_counter(realCount);
-    gBoard->get_live_counter(liveCount);
+    fBoard->get_real_counter(realCount);
+    fBoard->get_live_counter(liveCount);
 
     ui->lineRealCount->setText(QString::number(realCount));
     ui->lineLiveCount->setText(QString::number(liveCount));
@@ -1031,7 +1038,7 @@ void FEEControlWin::on_btnPath_clicked()
 #include <fstream>
 bool FEEControlWin::ReadTimeStamp()
 {
-    // auto flag = gBoard->ReadT0TSCounter(fCurrentT0ID);
+    // auto flag = fBoard->ReadT0TSCounter(fCurrentT0ID);
     // if (!flag)
     //     return false;
 
@@ -1040,11 +1047,11 @@ bool FEEControlWin::ReadTimeStamp()
     //     T0IDdev = 5;
 
     uint64_t timeStampTemp[5];
-    // flag = gBoard->ReadTimeStamp(T0IDdev, timeStampTemp);
+    // flag = fBoard->ReadTimeStamp(T0IDdev, timeStampTemp);
     // if (!flag)
     //     return false;
 
-    int T0IDdev = gBoard->ReadTimeStamp(timeStampTemp, fCurrentT0ID);
+    int T0IDdev = fBoard->ReadTimeStamp(timeStampTemp, fCurrentT0ID);
     auto flag = T0IDdev > 0;
     QLabel *labelList[5];
     labelList[0] = ui->lblTS0;
@@ -1112,16 +1119,16 @@ bool FEEControlWin::GenerateROOTFile()
     ui->brsMessage->append(tr("File Path: ") + fsFilePath);
     ui->brsMessage->append(tr("File Name: ") + fsFileNameTotal);
 
-    bool rtn = gDataManager->Init((fsFilePath + "/" + fsFileNameTotal).toStdString());
-    gDataManager->SetBoardNo(gBoard->GetBoardNo());
-    gDataManager->SetCITIROCConfig(gParser->GetString());
-    gDataManager->SetDAQDatime(fFileTimeStamp);
-    gDataManager->SetSelectedLogic(gBoard->GetLastLogic());
+    bool rtn = fDataManager->Init((fsFilePath + "/" + fsFileNameTotal).toStdString());
+    fDataManager->SetBoardNo(fBoard->GetBoardNo());
+    fDataManager->SetCITIROCConfig(gParser->GetString());
+    fDataManager->SetDAQDatime(fFileTimeStamp);
+    fDataManager->SetSelectedLogic(fBoard->GetLastLogic());
 
-    gBoard->ReadTemp();
+    fBoard->ReadTemp();
     double temp[4];
-    gBoard->GetTemp(temp);
-    gDataManager->SetDAQTemp(temp);
+    fBoard->GetTemp(temp);
+    fDataManager->SetDAQTemp(temp);
 
     if (!rtn)
     {
@@ -1147,7 +1154,7 @@ void FEEControlWin::on_btnFileInit_clicked()
 
 void FEEControlWin::CloseSaveFile()
 {
-    gDataManager->Close();
+    fDataManager->Close();
     // ui->btnFileInit->setEnabled(true);
     ui->btnFileClose->setEnabled(false);
 
@@ -1229,15 +1236,15 @@ void FEEControlWin::update_DAQClock()
     ui->timerDAQ->setTime(QTime::fromMSecsSinceStartOfDay(time));
 
     // Get count from DataManager
-    ui->lineHGDAQCount->setText(QString::number(gDataManager->GetHGTotalCount()));
-    ui->lineLGDAQCount->setText(QString::number(gDataManager->GetLGTotalCount()));
-    ui->lineTDCDAQCount->setText(QString::number(gDataManager->GetTDCTotalCount()));
+    ui->lineHGDAQCount->setText(QString::number(fDataManager->GetHGTotalCount()));
+    ui->lineLGDAQCount->setText(QString::number(fDataManager->GetLGTotalCount()));
+    ui->lineTDCDAQCount->setText(QString::number(fDataManager->GetTDCTotalCount()));
 
     // Get queue length from FEEControl
-    // ui->lineHGQueue->setText(QString::number(gBoard->GetHGQueueMonitor()));
-    // ui->lineLGQueue->setText(QString::number(gBoard->GetLGQueueMonitor()));
-    // ui->lineTDCQueue->setText(QString::number(gBoard->GetTDCQueueMonitor()));
-    ui->lineUnreadCount->setText(QString::number(gBoard->GetQueueGroupMonitor() * 20));
+    // ui->lineHGQueue->setText(QString::number(fBoard->GetHGQueueMonitor()));
+    // ui->lineLGQueue->setText(QString::number(fBoard->GetLGQueueMonitor()));
+    // ui->lineTDCQueue->setText(QString::number(fBoard->GetTDCQueueMonitor()));
+    ui->lineUnreadCount->setText(QString::number(fBoard->GetQueueGroupMonitor() * 20));
 }
 
 void FEEControlWin::handle_TSClock()
@@ -1267,7 +1274,7 @@ bool FEEControlWin::TryStartDAQ(std::string sPath, std::string sFileName, int nD
     fsFilePath = QString::fromStdString(sPath);
     fsFileName = QString::fromStdString(sFileName);
 
-    if (gDataManager->IsOpen())
+    if (fDataManager->IsOpen())
     {
         // on_btnFileClose_clicked();
         CloseSaveFile();
@@ -1276,7 +1283,7 @@ bool FEEControlWin::TryStartDAQ(std::string sPath, std::string sFileName, int nD
     auto rtn = GenerateROOTFile();
     if (!rtn)
         return false;
-    if (!gDataManager->IsOpen())
+    if (!fDataManager->IsOpen())
         return false;
 
     // Force DAQ start
@@ -1286,8 +1293,8 @@ bool FEEControlWin::TryStartDAQ(std::string sPath, std::string sFileName, int nD
     // Draw Start
     on_btnStartDraw_clicked();
     QTimer::singleShot(500, this, SLOT(on_btnStartDraw_clicked()));
-    // gDataManager->DrawHG(ui->boxDrawCh->value());
-    gDataManager->Draw(ui->boxDrawCh->value(), (DrawOption)GetDrawOption());
+    // fDataManager->DrawHG(ui->boxDrawCh->value());
+    fDataManager->Draw(ui->boxDrawCh->value(), (DrawOption)GetDrawOption());
     if (fdrawWin)
         fdrawWin->Update();
 #endif
@@ -1310,7 +1317,7 @@ void FEEControlWin::ForceStartDAQ(int nCount, QTime daqTime, int msBufferWaiting
 
     fDAQRuningFlag = 1;
 #ifndef USERDEFINE_DISABLE_ENABLE_INDEPENDENT
-    gBoard->enable_tdc(1);
+    fBoard->enable_tdc(1);
 #endif
 
     QDateTime dateTime(QDateTime::currentDateTime()); // Start Message
@@ -1372,9 +1379,9 @@ void FEEControlWin::StopDAQ()
     if (fDAQRuningFlag)
     {
         fDAQRuningFlag = 0;
-        gBoard->SetFifoReadBreak();
+        fBoard->SetFifoReadBreak();
 #ifndef USERDEFINE_DISABLE_ENABLE_INDEPENDENT
-        gBoard->enable_tdc(0);
+        fBoard->enable_tdc(0);
 #endif
     }
 }
@@ -1397,7 +1404,7 @@ void FEEControlWin::handle_DAQRequest(UserDefine::DAQRequestInfo *daq)
 void FEEControlWin::SelectLogic(int logic)
 {
     fpbtngrpLogic->button(logic)->setChecked(1);
-    gBoard->logic_select(logic);
+    fBoard->logic_select(logic);
 
     ui->brsMessage->setTextColor(greenColor);
     ui->brsMessage->setFontWeight(QFont::Bold);
@@ -1613,7 +1620,7 @@ bool FEEControlWin::PrintToScreen()
         fspinsLGAmp[ch]->setValue(gParser->Get_AMP_LG_DAC(ch));
         fcbDisablePA[ch]->setChecked(gParser->Get_PA_Switcher(ch));
 
-        fcbChannelMask[ch]->setChecked(gBoard->GetMask(ch, fChannelMasks));
+        fcbChannelMask[ch]->setChecked(fBoard->GetMask(ch, fChannelMasks));
     }
     ui->boxDiscDAC1->setValue(gParser->GetDiscDAC1());
     ui->boxDiscDAC2->setValue(gParser->GetDiscDAC2());
@@ -1634,7 +1641,7 @@ bool FEEControlWin::ScanFromScreen()
         gParser->Set_AMP_LG_DAC(ch, fspinsLGAmp[ch]->value());
         gParser->DisablePA(ch, fcbDisablePA[ch]->isChecked());
 
-        gBoard->GenerateChMask(ch, fcbChannelMask[ch]->isChecked(), fChannelMasks);
+        fBoard->GenerateChMask(ch, fcbChannelMask[ch]->isChecked(), fChannelMasks);
     }
     gParser->SetDiscDAC1(ui->boxDiscDAC1->value());
     gParser->SetDiscDAC2(ui->boxDiscDAC2->value());
@@ -1644,7 +1651,7 @@ bool FEEControlWin::ScanFromScreen()
 
 bool FEEControlWin::SendCITIROCConfig()
 {
-    auto rtn = gBoard->SendConfig(gParser);
+    auto rtn = fBoard->SendConfig(gParser);
     std::cout << "Test: send config return " << rtn << std::endl;
     if (rtn)
     {
@@ -1803,8 +1810,8 @@ void FEEControlWin::handle_ContinousDraw()
         ch = ui->boxDrawCh->value();
         option = (DrawOption)GetDrawOption();
         // std::cout << option << std::endl;
-        // gDataManager->DrawHG(ui->boxDrawCh->value());
-        gDataManager->Draw(ui->boxDrawCh->value(), (DrawOption)GetDrawOption());
+        // fDataManager->DrawHG(ui->boxDrawCh->value());
+        fDataManager->Draw(ui->boxDrawCh->value(), (DrawOption)GetDrawOption());
     }
     if (!fdrawWin->isHidden())
         fdrawWin->Update();
@@ -1857,7 +1864,7 @@ void FEEControlWin::handle_DrawOption_Changed()
 void FEEControlWin::on_btnMask_clicked()
 {
     ScanMaskFromSpinbox();
-    gBoard->send_ch_masks(fChannelMasks);
+    fBoard->send_ch_masks(fChannelMasks);
 
     ui->brsMessage->setTextColor(QColor(0, 255, 0));
     ui->brsMessage->setFontWeight(QFont::Bold);
@@ -1954,14 +1961,14 @@ void FEEControlWin::on_btnAllSetMask_clicked()
 
 void FEEControlWin::on_btnSignalProbe_clicked()
 {
-    gBoard->send_ch_probe((char)ui->boxProbeCh->value());
+    fBoard->send_ch_probe((char)ui->boxProbeCh->value());
 }
 
 // FEE Mask Control END
 
 void FEEControlWin::on_btnClearDraw_clicked()
 {
-    gDataManager->ClearDraw();
+    fDataManager->ClearDraw();
 }
 
 #ifdef USE_VISA_CONTROL
@@ -2069,9 +2076,9 @@ void FEEControlWin::handle_TempMeasurement()
 {
     QDateTime timeNow = QDateTime::currentDateTime();
     double sec = fTempStartTime.msecsTo(timeNow) / 1000.0;
-    gBoard->ReadTemp();
+    fBoard->ReadTemp();
     double temp[4];
-    gBoard->GetTemp(temp);
+    fBoard->GetTemp(temp);
 
     for (int i = 0; i < 4; i++)
     {

@@ -921,7 +921,7 @@ int FEEControl::ReadTimeStamp(uint64_t *tsArray)
         if (T0IDdev == 0)
             return T0IDdev;
 
-        flag &= gBoard->ReadTimeStamp(T0IDdev, tsArray);
+        flag &= ReadTimeStamp(T0IDdev, tsArray);
         flag &= ReadT0TSCounter(fCurrentT0ID);
         if (!flag)
             break;
@@ -1449,8 +1449,6 @@ bool FEEControl::tdc_fifo_read(int read_num, int loop_times, const char *tdc_fil
     }
     return true;
 }
-
-// FEEControl *gBoard = new FEEControl;
 
 HVStatus::HVStatus(string s)
 {

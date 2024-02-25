@@ -308,7 +308,6 @@ public:
     static int getIndexOfSigns(char ch);
 };
 
-// extern FEEControl *gBoard;
 bool operator==(const FEEControl &a, const FEEControl &b);
 
 //! TODO: add multi board manager
