@@ -7,6 +7,8 @@
 #include <string>
 #include <fstream>
 #include <QDateTime>
+#include <QTimer>
+#include <QLabel>
 
 class MultiBoard;
 class FEEControl;
@@ -18,6 +20,8 @@ namespace Ui
 {
     class MultiBoard;
 }
+
+extern const std::vector<int> gBoardScanList;
 
 class SingleBoardJob : public QObject
 {
@@ -39,8 +43,9 @@ private:
 };
 
 /// @brief Boards initialization and connection
-class BoardConnection
+class BoardConnection : public QObject
 {
+    Q_OBJECT
     friend class SingleBoardJob;
 signals:
     void RequestStartDAQ();
@@ -51,6 +56,9 @@ public:
     BoardConnection();
     ~BoardConnection();
     bool InitBoard(int boardNo);
+    bool CloseBoard();
+    bool IsInitialized() { return fInitilized; }
+
     void ProcessConnection();
     void ProcessDisconnection();
 
@@ -67,8 +75,12 @@ public:
 
     bool IsConnected() { return fConnectionStatus; }
 
+    void SetDAQConfig(int nCount = -1, QTime time = QTime(0, 0, 0, 0), int nBufferSleepms = 200, int nBufferLeastEvents = 30, bool bClearQueue = 0);
+    void SetFilePathName(std::string sFilePath = "", std::string sFileName = "");
+
 private:
     int fBoardNo = -1;
+    bool fInitilized = 0;
     FEEControl *fBoard = nullptr;
     DataManager *fDataManager = nullptr;
     ConfigFileParser *fParser = nullptr;
@@ -103,7 +115,7 @@ private:
     bool fFlagClearQueue = 0;          // FEE control before DAQ, give signal whether clear Queue before DAQ
     volatile bool fDAQRuningFlag = 0;  // DAQ runing flag, used to break daq process
     // Used before DAQ
-    bool InitDataFile(std::string sDataFolder = "../Data/");
+    bool InitDataFile();
 
     // DAQ monitor
     QTimer fMonitorTimer; // Monitor DAQ
@@ -134,6 +146,7 @@ class MultiBoardJob : public QObject
 {
     Q_OBJECT
 public:
+    ~MultiBoardJob() = default;
 signals:
     void UpdateBoardStatus(int boardNo, bool status);
     void BoardsScanned();
@@ -142,7 +155,7 @@ public slots:
     void ScanBoards();
 
 private:
-    MultiBoard *fMultiBoardWin;
+    MultiBoard *fMultiBoardWin = NULL;
 };
 
 class MultiBoard : public QMainWindow
@@ -155,7 +168,7 @@ public:
 
 private:
     Ui::MultiBoard *ui;
-    MultiBoardJob *fMultiBoardJob;
+    MultiBoardJob *fMultiBoardJob = nullptr;
     QThread fMultiBoardThread;
 
     // Scan boards
@@ -163,8 +176,23 @@ private:
     void UpdateLists();
     void ClearLists();
     std::map<int, bool> fBoardStatus;
+    std::map<int, BoardConnection *> fBoardConnections;
 
-    // Boards connection
+    // Boards Status
+    QTimer fBoardStatusTimer;
+    void ProcessConnection();
+    void ProcessDisconnection();
+    void UpdateStatus();
+
+    // Used for update DAQ status
+    std::map<int, QLabel *> flblBoardNo;
+    std::map<int, QLabel *> flblConnectionStatus;
+    std::map<int, QLabel *> flblRealCount;
+    std::map<int, QLabel *> flblLiveCount;
+    std::map<int, QLabel *> flblDAQCount;
+    std::map<int, QLabel *> flblHGCount;
+    std::map<int, QLabel *> flblLGCount;
+    std::map<int, QLabel *> flblTDCCount;
 
 signals:
     void StartScanBoards(); // Start scanning boards

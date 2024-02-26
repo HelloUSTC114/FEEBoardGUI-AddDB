@@ -6,10 +6,11 @@
 
 #include <QtConcurrent/QtConcurrent>
 #include <QDateTime>
+const std::vector<int> gBoardScanList = {0, 1, 2, 3, 4, 5, 6, 7};
 
 void MultiBoardJob::ScanBoards()
 {
-    for (int boardNo = 0; boardNo < 12; boardNo++)
+    for (auto boardNo : gBoardScanList)
     {
         gBoard->InitPort(boardNo);
         bool flag = 0;
@@ -43,6 +44,44 @@ MultiBoard::MultiBoard(QWidget *parent) : QMainWindow(parent),
 {
     ui->setupUi(this);
 
+    // ui settings
+    for (int idx = 0; idx < gBoardScanList.size(); idx++)
+    {
+        auto boardNo = gBoardScanList[idx];
+        flblBoardNo[boardNo] = new QLabel(ui->grpStatus);
+        flblBoardNo[boardNo]->setText(QString::number(boardNo));
+        ui->gridStatus->addWidget(flblBoardNo[boardNo], idx, 0, 1, 1, {Qt::AlignCenter, Qt::AlignCenter});
+
+        flblConnectionStatus[boardNo] = new QLabel(ui->grpStatus);
+        flblConnectionStatus[boardNo]->setText("Not connected");
+        flblConnectionStatus[boardNo]->setStyleSheet("QLabel { background-color : red; color : black; }");
+        ui->gridStatus->addWidget(flblConnectionStatus[boardNo], idx, 1, 1, 1, {Qt::AlignCenter, Qt::AlignCenter});
+
+        flblRealCount[boardNo] = new QLabel(ui->grpStatus);
+        flblRealCount[boardNo]->setText("0");
+        ui->gridStatus->addWidget(flblRealCount[boardNo], idx, 2, 1, 1, {Qt::AlignCenter, Qt::AlignCenter});
+
+        flblLiveCount[boardNo] = new QLabel(ui->grpStatus);
+        flblLiveCount[boardNo]->setText("0");
+        ui->gridStatus->addWidget(flblLiveCount[boardNo], idx, 3, 1, 1, {Qt::AlignCenter, Qt::AlignCenter});
+
+        flblDAQCount[boardNo] = new QLabel(ui->grpStatus);
+        flblDAQCount[boardNo]->setText("0");
+        ui->gridStatus->addWidget(flblDAQCount[boardNo], idx, 4, 1, 1, {Qt::AlignCenter, Qt::AlignCenter});
+
+        flblHGCount[boardNo] = new QLabel(ui->grpStatus);
+        flblHGCount[boardNo]->setText("0");
+        ui->gridStatus->addWidget(flblHGCount[boardNo], idx, 5, 1, 1, {Qt::AlignCenter, Qt::AlignCenter});
+
+        flblLGCount[boardNo] = new QLabel(ui->grpStatus);
+        flblLGCount[boardNo]->setText("0");
+        ui->gridStatus->addWidget(flblLGCount[boardNo], idx, 6, 1, 1, {Qt::AlignCenter, Qt::AlignCenter});
+
+        flblTDCCount[boardNo] = new QLabel(ui->grpStatus);
+        flblTDCCount[boardNo]->setText("0");
+        ui->gridStatus->addWidget(flblTDCCount[boardNo], idx, 7, 1, 1, {Qt::AlignCenter, Qt::AlignCenter});
+    }
+
     // Create work thread
     fMultiBoardJob = new MultiBoardJob();
     fMultiBoardJob->moveToThread(&fMultiBoardThread);
@@ -53,18 +92,25 @@ MultiBoard::MultiBoard(QWidget *parent) : QMainWindow(parent),
     connect(this, &MultiBoard::StartScanBoards, fMultiBoardJob, &MultiBoardJob::ScanBoards);
     connect(fMultiBoardJob, &MultiBoardJob::UpdateBoardStatus, this, &MultiBoard::handle_BoardStatus);
     connect(fMultiBoardJob, &MultiBoardJob::BoardsScanned, this, &MultiBoard::handle_BoardsScanned);
+
+    // Process Board Connection
+    for (auto boardNo : gBoardScanList)
+    {
+        auto boardConnection = new BoardConnection();
+        fBoardConnections[boardNo] = boardConnection;
+    }
 }
 
 MultiBoard::~MultiBoard()
 {
-    delete ui;
     fMultiBoardThread.quit();
     fMultiBoardThread.wait();
 
-    if (fMultiBoardJob)
+    delete ui;
+
+    for (auto &board : fBoardConnections)
     {
-        delete fMultiBoardJob;
-        fMultiBoardJob = nullptr;
+        delete board.second;
     }
 }
 
@@ -75,13 +121,22 @@ void MultiBoard::ScanBoards()
     ui->btnScanBoards->setEnabled(false);
 }
 
+#include <QLabel>
 void MultiBoard::UpdateLists()
 {
     ui->listBoards->clear();
     for (auto &board : fBoardStatus)
     {
         QString status = board.second ? "Connected" : "Not connected";
-        ui->listBoards->addItem(QString("Board No: %1\tStatus: %2").arg(board.first).arg(status));
+        // ui->listBoards->addItem(QString("Board No: %1\tStatus: %2").arg(board.first).arg(status));
+        auto label = new QLabel("Board No: " + QString::number(board.first) + "\tStatus: " + status);
+        if (board.second)
+            label->setStyleSheet("QLabel { background-color : green; color : black; }");
+        else
+            label->setStyleSheet("QLabel { background-color : red; color : black; }");
+        auto item = new QListWidgetItem();
+        ui->listBoards->addItem(item);
+        ui->listBoards->setItemWidget(item, label);
     }
 }
 
@@ -89,6 +144,34 @@ void MultiBoard::ClearLists()
 {
     ui->listBoards->clear();
     fBoardStatus.clear();
+}
+
+void MultiBoard::ProcessConnection()
+{
+    for (auto &board : fBoardStatus)
+    {
+        if (board.second)
+            if (!fBoardConnections[board.first]->IsInitialized())
+                fBoardConnections[board.first]->InitBoard(board.first);
+    }
+}
+
+void MultiBoard::UpdateStatus()
+{
+    // Connection status
+    bool updateStatusFlag = 0;
+    for (auto &board : fBoardStatus)
+    {
+        if (board.second != fBoardConnections[board.first]->IsConnected())
+        {
+            updateStatusFlag = 1;
+            board.second = fBoardConnections[board.first]->IsConnected();
+        }
+    }
+    if (updateStatusFlag)
+        UpdateLists();
+
+    // DAQ status
 }
 
 void MultiBoard::handle_BoardStatus(int boardNo, bool status)
@@ -101,6 +184,7 @@ void MultiBoard::handle_BoardsScanned()
 {
     ui->btnScanBoards->setEnabled(true);
     UpdateLists();
+    ProcessConnection();
 }
 
 void MultiBoard::on_btnScanBoards_clicked()
@@ -110,6 +194,7 @@ void MultiBoard::on_btnScanBoards_clicked()
 
 #include "feecontrol.h"
 #include "datamanager.h"
+#include "configfileparser.h"
 
 BoardConnection::BoardConnection()
 {
@@ -120,15 +205,15 @@ BoardConnection::BoardConnection()
 
     fSingleBoardJob = new SingleBoardJob(this);
     fSingleBoardJob->moveToThread(&fSingleBoardThread);
-    QObject::connect(&fSingleBoardThread, &QThread::finished, fSingleBoardJob, &QObject::deleteLater);
+    connect(&fSingleBoardThread, &QThread::finished, fSingleBoardJob, &QObject::deleteLater);
     fSingleBoardThread.start();
 
-    QObject::connect(this, &BoardConnection::StartDAQ, fSingleBoardJob, &SingleBoardJob::handle_StartDAQ);
-    QObject::connect(fSingleBoardJob, &SingleBoardJob::DAQFinished, this, &BoardConnection::handle_DAQFinished);
+    connect(this, &BoardConnection::RequestStartDAQ, fSingleBoardJob, &SingleBoardJob::handle_StartDAQ);
+    connect(fSingleBoardJob, &SingleBoardJob::DAQFinished, this, &BoardConnection::handle_DAQFinished);
 
-    QObject::connect(&fBoardMonitorTimer, &QTimer::timeout, this, &BoardConnection::RetrieveCount);
+    connect(&fBoardMonitorTimer, &QTimer::timeout, this, &BoardConnection::RetrieveCount);
 
-    QObject::connect(&fMonitorTimer, &QTimer::timeout, this, &BoardConnection::MonitorDAQ);
+    connect(&fMonitorTimer, &QTimer::timeout, this, &BoardConnection::MonitorDAQ);
 }
 
 BoardConnection::~BoardConnection()
@@ -156,11 +241,6 @@ BoardConnection::~BoardConnection()
 
     fSingleBoardThread.quit();
     fSingleBoardThread.wait();
-    if (fSingleBoardJob)
-    {
-        delete fSingleBoardJob;
-        fSingleBoardJob = nullptr;
-    }
 
     fBoardMonitorTimer.stop();
     fMonitorTimer.stop();
@@ -170,18 +250,18 @@ BoardConnection::~BoardConnection()
 
 bool BoardConnection::InitBoard(int boardNo)
 {
+    if (fInitilized)
+        return false;
+
     fBoardNo = boardNo;
     fBoard->InitPort(boardNo);
+    fInitilized = true;
 
     if (fBoard->TestConnect())
-        fConnectionStatus = true;
-    else
-        fConnectionStatus = false;
-
-    if (fConnectionStatus)
         ProcessConnection();
     else
         ProcessDisconnection();
+
     return fConnectionStatus;
 }
 
@@ -193,11 +273,19 @@ void BoardConnection::ProcessConnection()
     fConnectionStatus = true;
 }
 
+bool BoardConnection::CloseBoard()
+{
+    fBoardNo = -1;
+    fInitilized = false;
+
+    ProcessDisconnection();
+    return true;
+}
+
 void BoardConnection::ProcessDisconnection()
 {
     fDataManager->Close();
     StopDAQ();
-    fDAQRuningFlag = 0;
     fBoardMonitorTimer.stop();
     fConnectionStatus = false;
     fout.close();
@@ -230,10 +318,12 @@ bool BoardConnection::SetBoardConfig(std::string sRepoFolder)
     return true;
 }
 
-bool BoardConnection::InitDataFile(std::string sDataFolder)
+bool BoardConnection::InitDataFile()
 {
-    fsFilePath = sDataFolder;
-    fsFileName = "Board" + std::to_string(fBoardNo);
+    if (fsFilePath == "")
+        fsFilePath = "../Data/";
+    if (fsFileName == "")
+        fsFileName = "Board" + std::to_string(fBoardNo);
     auto fFileTimeStamp = QDateTime::currentDateTime();
     auto sFileNameTotal = fsFileName + fFileTimeStamp.toString("-yyyy-MM-dd-hh-mm-ss").toStdString() + ".root";
     fDataManager->Init(fsFilePath + sFileNameTotal);
@@ -264,7 +354,6 @@ bool BoardConnection::StartDAQ()
     fDAQRuningFlag = true;
     fBoard->HVON();
     fMonitorTimer.start(1000);
-    QThread::msleep(1000);
 
     emit RequestStartDAQ();
 
@@ -279,6 +368,25 @@ bool BoardConnection::StopDAQ()
         fBoard->SetFifoReadBreak();
     }
     return true;
+}
+
+void BoardConnection::SetDAQConfig(int nCount, QTime time, int nBufferSleepms, int nBufferLeastEvents, bool bClearQueue)
+{
+    fDAQSettingCount = nCount;
+    fDAQSettingTime = time;
+    fDAQBufferSleepms = nBufferSleepms;
+    fDAQBufferLeastEvents = nBufferLeastEvents;
+    fFlagClearQueue = bClearQueue;
+}
+
+void BoardConnection::SetFilePathName(std::string sFilePath, std::string sFileName)
+{
+    fsFilePath = sFilePath;
+    fsFileName = sFileName;
+    if (fsFilePath == "")
+        fsFilePath = "../Data/";
+    if (fsFileName == "")
+        fsFileName = "Board" + std::to_string(fBoardNo);
 }
 
 void BoardConnection::handle_DAQFinished(int nDAQLoop)
@@ -418,14 +526,18 @@ bool BoardConnection::RetrieveCount()
     return false;
 }
 
-SingleBoardJob::SingleBoardJob(BoardConnection *conn) : fConnection(conn), fBoard(fConnection->GetBoard()), fDataManager(fConnection->GetDataManager())
+SingleBoardJob::SingleBoardJob(BoardConnection *conn)
 {
+    fConnection = conn;
+    fBoard = fConnection->GetBoard();
+    fDataManager = fConnection->GetDataManager();
 }
 
 void SingleBoardJob::handle_StartDAQ()
 {
     int nDAQLoop = 0;
     int nDAQEventCount = 0;
+    QThread::msleep(1000); // Wait for 1s to make sure the board is ready (for the first time only
     fConnection->fDAQStartTime = QDateTime::currentDateTime();
 
     // Clear queue before DAQ Start

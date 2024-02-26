@@ -108,6 +108,20 @@ bool DataManager::Init(string sInput)
 
 void DataManager::Close()
 {
+    if (!fFile)
+    {
+        memset(fHGHist, '\0', N_BOARD_CHANNELS * sizeof(TH1S *));
+        memset(fLGHist, '\0', N_BOARD_CHANNELS * sizeof(TH1S *));
+        memset(fTDCHist, '\0', N_BOARD_CHANNELS * sizeof(TH1S *));
+        
+        fFile = NULL;
+        fHGTree = NULL;
+        fLGTree = NULL;
+        fTDCTree = NULL;
+        ClearBuffer();
+        return;
+    }
+
     fFile->cd();
     if (fDatimeFlag)
     {
