@@ -255,7 +255,11 @@ bool MultiBoard::SetMasterBoard(int board)
     if (std::find(gBoardScanList.begin(), gBoardScanList.end(), board) == gBoardScanList.end())
         return false;
     bool rtn = fBoardConnections[board]->SetMasterBoard(1);
+
+    for (auto &board : gBoardScanList)
+        flblBoardNo[board]->setStyleSheet("QLabel { background-color : white; color : black; }");
     flblBoardNo[board]->setStyleSheet("QLabel { background-color : blue; color : black; }");
+
     for (auto &board : fBoardConnections)
         if (board.second->IsConnected())
             board.second->SetMasterBoard(0);
@@ -380,6 +384,28 @@ void MultiBoard::on_btnPath_clicked()
         fsFilePath = "../Data/";
 
     ui->linePath->setText(QString::fromStdString(fsFilePath));
+}
+
+void MultiBoard::on_listBoards_currentRowChanged(int currentRow)
+{
+    UpdateLists();
+    auto row = currentRow;
+    if (row < 0 || row >= ui->listBoards->count())
+        return;
+    auto item = ui->listBoards->item(row);
+    auto label = dynamic_cast<QLabel *>(ui->listBoards->itemWidget(item));
+    if (label->text().contains("Not connected"))
+        label->setStyleSheet("QLabel { background-color : blue; color : red; }");
+    else
+        label->setStyleSheet("QLabel { background-color : blue; color : green; }");
+}
+
+void MultiBoard::on_listBoards_itemDoubleClicked(QListWidgetItem *item)
+{
+    qDebug() << "Test" << endl;
+    ui->listBoards->setCurrentItem(item);
+    on_listBoards_currentRowChanged(ui->listBoards->currentRow());
+    on_btnMaster_clicked();
 }
 
 #include "feecontrol.h"
@@ -808,6 +834,14 @@ bool SingleBoardJob::JudgeLoopFlag(int nEventCount)
 
 void MultiBoard::on_btnMaster_clicked()
 {
-    auto board = ui->listBoards->selectedItems().at(0)->text().split("\t")[1].toInt();
+    int board;
+    int selectRow = ui->listBoards->currentRow();
+    auto select = ui->listBoards->item(selectRow);
+    auto label = dynamic_cast<QLabel *>(ui->listBoards->itemWidget(select));
+
+    if (!select)
+        return;
+    board = label->text().split("\t")[1].toInt();
+    qDebug() << "Selected: " << selectRow << '\t' << select->text() << label->text() << board << endl;
     SetMasterBoard(board);
 }

@@ -195,13 +195,15 @@ namespace UserDefine
             return "";
 
         auto sIP = list1[0].first;
-        std::stringstream ss(sIP);
+        static std::stringstream gss;
+        gss.clear();
+        gss.str(sIP);
         std::string sParsed, sTotal;
-        std::getline(ss, sParsed, '.');
+        std::getline(gss, sParsed, '.');
         sTotal += sParsed + ".";
-        std::getline(ss, sParsed, '.');
+        std::getline(gss, sParsed, '.');
         sTotal += sParsed + ".";
-        std::getline(ss, sParsed, '.');
+        std::getline(gss, sParsed, '.');
         sTotal += sParsed + ".";
         return sTotal;
     }

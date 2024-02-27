@@ -9,6 +9,7 @@
 #include <QDateTime>
 #include <QTimer>
 #include <QLabel>
+#include <QListWidgetItem>
 
 class MultiBoard;
 class FEEControl;
@@ -262,6 +263,8 @@ private slots:
     void on_btnDAQStop_clicked();
     void on_btnPath_clicked();
     void on_btnMaster_clicked();
+    void on_listBoards_currentRowChanged(int currentRow);
+    void on_listBoards_itemDoubleClicked(QListWidgetItem *item);
 };
 
 #endif // MULTIBOARD_H
