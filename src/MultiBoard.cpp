@@ -274,7 +274,6 @@ bool MultiBoard::SetMasterBoard(int board)
 {
     if (std::find(gBoardScanList.begin(), gBoardScanList.end(), board) == gBoardScanList.end())
         return false;
-    bool rtn = fBoardConnections[board]->SetMasterBoard(1);
 
     for (auto &board : gBoardScanList)
         flblBoardNo[board]->setStyleSheet("QLabel { background-color : white; color : black; }");
@@ -283,6 +282,7 @@ bool MultiBoard::SetMasterBoard(int board)
     for (auto &board : fBoardConnections)
         if (board.second->IsConnected())
             board.second->SetMasterBoard(0);
+    bool rtn = fBoardConnections[board]->SetMasterBoard(1);
     return rtn;
 }
 
@@ -336,30 +336,21 @@ void MultiBoard::on_btnDAQStart_clicked()
         fsFileName = fileName.toStdString();
     ui->lblFileName->setText(QString::fromStdString(fsFileName));
 
+    on_btnMaster_clicked();
+    // Start DAQ for all Boards
+    bool flagSuccess = 1;
     for (auto &board : fBoardConnections)
     {
         if (board.second->IsConnected())
         {
             board.second->SetDAQConfig(ui->boxDAQEvent->value(), ui->timeDAQSetting->time(), ui->boxBufferWait->value(), ui->boxLeastEvents->value(), ui->boxClearQueue->isChecked());
             board.second->SetFilePathName(fsFilePath, fsFileName + std::to_string(board.first));
+
+            auto flag = board.second->StartDAQ();
+            if (!flag)
+                flagSuccess = 0;
         }
     }
-
-    std::vector<QFuture<bool>> futures;
-    for (auto &board : fBoardConnections)
-        if (board.second->IsConnected())
-        {
-            auto future = QtConcurrent::run(board.second, &BoardConnection::StartDAQ);
-            futures.push_back(std::move(future));
-        }
-    for (auto &future : futures)
-        future.waitForFinished();
-
-    // Process the result
-    bool flagSuccess = 1;
-    for (auto &future : futures)
-        if (!future.result())
-            flagSuccess = 0;
     if (flagSuccess)
     {
         EnableAllTDC();
@@ -370,6 +361,32 @@ void MultiBoard::on_btnDAQStart_clicked()
         std::cout << "DAQ started failed!" << std::endl;
         on_btnDAQStop_clicked();
     }
+
+    // std::vector<QFuture<bool>> futures;
+    // for (auto &board : fBoardConnections)
+    //     if (board.second->IsConnected())
+    //     {
+    //         auto future = QtConcurrent::run(board.second, &BoardConnection::StartDAQ);
+    //         futures.push_back(std::move(future));
+    //     }
+    // for (auto &future : futures)
+    //     future.waitForFinished();
+
+    // // Process the result
+    // bool flagSuccess = 1;
+    // for (auto &future : futures)
+    //     if (!future.result())
+    //         flagSuccess = 0;
+    // if (flagSuccess)
+    // {
+    //     EnableAllTDC();
+    //     std::cout << "DAQ started successfully!" << std::endl;
+    // }
+    // else
+    // {
+    //     std::cout << "DAQ started failed!" << std::endl;
+    //     on_btnDAQStop_clicked();
+    // }
 }
 
 void MultiBoard::on_btnDAQStop_clicked()
@@ -718,15 +735,16 @@ bool BoardConnection::ReadTimeStamp()
     }
 
     // output into file
-    std::ofstream fout;
-    std::string outFileName = (std::string) "Board" + std::to_string(fBoardNo) + "TS.txt";
+    // std::ofstream fout;
+    // // std::string outFileName = (std::string) "Board" + std::to_string(fBoardNo) + "TS.txt";
+    // fout.open(outFileName, std::ios::app);
     for (int i = 0; i < T0IDdev; i++)
     {
         char out_char[100];
         sprintf(out_char, "%1.3f", fTimeStampArray[T0IDdev - 1 - i]);
         fout << fCurrentT0ID << '\t' << T0IDdev << '\t' << out_char << std::endl;
     }
-    fout.close();
+    // fout.close();
 
     fPreviousT0ID = fCurrentT0ID;
 
@@ -861,7 +879,7 @@ void MultiBoard::on_btnMaster_clicked()
 {
     int selectRow = ui->listBoards->currentRow();
     if (selectRow < 0 || selectRow > ui->listBoards->count())
-        return;
+        selectRow = 0;
     auto select = ui->listBoards->item(selectRow);
     auto label = dynamic_cast<QLabel *>(ui->listBoards->itemWidget(select));
 
