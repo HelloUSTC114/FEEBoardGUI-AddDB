@@ -6,218 +6,21 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1644</width>
-    <height>854</height>
+    <width>805</width>
+    <height>739</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <widget class="QListWidget" name="listBoards">
-    <property name="geometry">
-     <rect>
-      <x>30</x>
-      <y>90</y>
-      <width>161</width>
-      <height>291</height>
-     </rect>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="btnScanBoards">
+   <widget class="QGroupBox" name="grpStatus">
     <property name="geometry">
      <rect>
       <x>30</x>
       <y>390</y>
-      <width>161</width>
-      <height>21</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Scan Boards</string>
-    </property>
-   </widget>
-   <widget class="QGroupBox" name="groupBox">
-    <property name="geometry">
-     <rect>
-      <x>270</x>
-      <y>80</y>
-      <width>279</width>
-      <height>59</height>
-     </rect>
-    </property>
-    <property name="title">
-     <string>File Init</string>
-    </property>
-    <layout class="QGridLayout" name="gridLayout_2">
-     <item row="0" column="0">
-      <widget class="QPushButton" name="btnPath">
-       <property name="text">
-        <string>Choose Path</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="1">
-      <widget class="QLineEdit" name="lblFileName">
-       <property name="text">
-        <string>Board</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="2">
-      <widget class="QLabel" name="lblFileSuf">
-       <property name="text">
-        <string>*.root</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </widget>
-   <widget class="QGroupBox" name="grpDAQStart">
-    <property name="geometry">
-     <rect>
-      <x>260</x>
-      <y>160</y>
-      <width>291</width>
-      <height>191</height>
-     </rect>
-    </property>
-    <property name="title">
-     <string>DAQ Setting</string>
-    </property>
-    <layout class="QGridLayout" name="gridLayout_10">
-     <item row="0" column="1">
-      <widget class="QSpinBox" name="boxDAQEvent">
-       <property name="minimum">
-        <number>-1</number>
-       </property>
-       <property name="maximum">
-        <number>999999999</number>
-       </property>
-       <property name="value">
-        <number>-1</number>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="1">
-      <widget class="QTimeEdit" name="timeDAQSetting">
-       <property name="displayFormat">
-        <string>HH:mm:ss</string>
-       </property>
-       <property name="time">
-        <time>
-         <hour>0</hour>
-         <minute>0</minute>
-         <second>0</second>
-        </time>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="1">
-      <widget class="QSpinBox" name="boxBufferWait">
-       <property name="minimum">
-        <number>1</number>
-       </property>
-       <property name="maximum">
-        <number>999999999</number>
-       </property>
-       <property name="value">
-        <number>200</number>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="0">
-      <widget class="QLabel" name="label_19">
-       <property name="text">
-        <string>Time Setting:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="0">
-      <widget class="QLabel" name="label_32">
-       <property name="text">
-        <string>nEvents Setting:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="0">
-      <widget class="QLabel" name="label_2">
-       <property name="text">
-        <string>Loop Wait (ms)</string>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="0">
-      <widget class="QLabel" name="label_3">
-       <property name="text">
-        <string>Loop Least Events:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="1">
-      <widget class="QSpinBox" name="boxLeastEvents">
-       <property name="minimum">
-        <number>1</number>
-       </property>
-       <property name="maximum">
-        <number>1000</number>
-       </property>
-       <property name="value">
-        <number>30</number>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="0">
-      <widget class="QPushButton" name="btnDAQStart">
-       <property name="text">
-        <string>Start DAQ</string>
-       </property>
-      </widget>
-     </item>
-     <item row="4" column="1">
-      <widget class="QCheckBox" name="boxClearQueue">
-       <property name="text">
-        <string>Clear Q before DAQ</string>
-       </property>
-       <property name="checked">
-        <bool>true</bool>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </widget>
-   <widget class="QPushButton" name="btnDAQStop">
-    <property name="geometry">
-     <rect>
-      <x>260</x>
-      <y>370</y>
-      <width>291</width>
-      <height>29</height>
-     </rect>
-    </property>
-    <property name="font">
-     <font>
-      <pointsize>12</pointsize>
-      <bold>true</bold>
-     </font>
-    </property>
-    <property name="text">
-     <string>Stop DAQ</string>
-    </property>
-   </widget>
-   <widget class="QGroupBox" name="grpStatus">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>440</y>
-      <width>1491</width>
-      <height>361</height>
+      <width>641</width>
+      <height>281</height>
      </rect>
     </property>
     <property name="title">
@@ -227,17 +30,17 @@
      <item row="0" column="0">
       <widget class="QWidget" name="widget" native="true">
        <layout class="QGridLayout" name="gridLayout">
-        <item row="0" column="4">
+        <item row="0" column="5">
          <widget class="QLabel" name="label_6">
           <property name="text">
-           <string>DAQ Count/Rate (Hz)</string>
+           <string>DAQ Count</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignCenter</set>
           </property>
          </widget>
         </item>
-        <item row="0" column="5">
+        <item row="0" column="6">
          <widget class="QLabel" name="label_7">
           <property name="text">
            <string>HG Count</string>
@@ -250,7 +53,17 @@
         <item row="0" column="3">
          <widget class="QLabel" name="label_4">
           <property name="text">
-           <string>Live Count/Rate (Hz)</string>
+           <string>Live Count</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QLabel" name="label_10">
+          <property name="text">
+           <string>Status</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignCenter</set>
@@ -260,7 +73,7 @@
         <item row="0" column="2">
          <widget class="QLabel" name="label_5">
           <property name="text">
-           <string>Real Count/Rate (Hz)</string>
+           <string>Real Count</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignCenter</set>
@@ -277,7 +90,7 @@
           </property>
          </widget>
         </item>
-        <item row="0" column="7">
+        <item row="0" column="8">
          <widget class="QLabel" name="label_9">
           <property name="text">
            <string>TDC Count</string>
@@ -287,7 +100,7 @@
           </property>
          </widget>
         </item>
-        <item row="0" column="6">
+        <item row="0" column="7">
          <widget class="QLabel" name="label_8">
           <property name="text">
            <string>LG Count</string>
@@ -297,10 +110,10 @@
           </property>
          </widget>
         </item>
-        <item row="0" column="1">
-         <widget class="QLabel" name="label_10">
+        <item row="0" column="4">
+         <widget class="QLabel" name="label_11">
           <property name="text">
-           <string>Connection</string>
+           <string>T0 TS</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignCenter</set>
@@ -335,13 +148,213 @@
      </item>
     </layout>
    </widget>
+   <widget class="QWidget" name="widget_2" native="true">
+    <property name="geometry">
+     <rect>
+      <x>30</x>
+      <y>40</y>
+      <width>281</width>
+      <height>331</height>
+     </rect>
+    </property>
+    <layout class="QGridLayout" name="gridLayout_4">
+     <item row="0" column="0">
+      <widget class="QListWidget" name="listBoards"/>
+     </item>
+     <item row="1" column="0">
+      <widget class="QPushButton" name="btnScanBoards">
+       <property name="text">
+        <string>Scan Boards</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="0">
+      <widget class="QPushButton" name="btnMaster">
+       <property name="text">
+        <string>Select Master Board</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+   <widget class="QWidget" name="widget_3" native="true">
+    <property name="geometry">
+     <rect>
+      <x>380</x>
+      <y>50</y>
+      <width>293</width>
+      <height>312</height>
+     </rect>
+    </property>
+    <layout class="QGridLayout" name="gridLayout_5">
+     <item row="0" column="0">
+      <widget class="QGroupBox" name="groupBox">
+       <property name="title">
+        <string>File Init</string>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_2">
+        <item row="1" column="2">
+         <widget class="QLabel" name="lblFileSuf">
+          <property name="text">
+           <string>*.root</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="0">
+         <widget class="QPushButton" name="btnPath">
+          <property name="text">
+           <string>Choose Path</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0" colspan="2">
+         <widget class="QLineEdit" name="lblFileName">
+          <property name="text">
+           <string>Board</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1" colspan="2">
+         <widget class="QLineEdit" name="linePath"/>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QGroupBox" name="grpDAQStart">
+       <property name="title">
+        <string>DAQ Setting</string>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_10">
+        <item row="0" column="1">
+         <widget class="QSpinBox" name="boxDAQEvent">
+          <property name="minimum">
+           <number>-1</number>
+          </property>
+          <property name="maximum">
+           <number>999999999</number>
+          </property>
+          <property name="value">
+           <number>-1</number>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QTimeEdit" name="timeDAQSetting">
+          <property name="displayFormat">
+           <string>HH:mm:ss</string>
+          </property>
+          <property name="time">
+           <time>
+            <hour>0</hour>
+            <minute>0</minute>
+            <second>0</second>
+           </time>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="1">
+         <widget class="QSpinBox" name="boxBufferWait">
+          <property name="minimum">
+           <number>1</number>
+          </property>
+          <property name="maximum">
+           <number>999999999</number>
+          </property>
+          <property name="value">
+           <number>200</number>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="label_19">
+          <property name="text">
+           <string>Time Setting:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="0">
+         <widget class="QLabel" name="label_32">
+          <property name="text">
+           <string>nEvents Setting:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="0">
+         <widget class="QLabel" name="label_2">
+          <property name="text">
+           <string>Loop Wait (ms)</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="0">
+         <widget class="QLabel" name="label_3">
+          <property name="text">
+           <string>Loop Least Events:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="1">
+         <widget class="QSpinBox" name="boxLeastEvents">
+          <property name="minimum">
+           <number>1</number>
+          </property>
+          <property name="maximum">
+           <number>1000</number>
+          </property>
+          <property name="value">
+           <number>30</number>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="0">
+         <widget class="QPushButton" name="btnDAQStart">
+          <property name="text">
+           <string>Start DAQ</string>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="1">
+         <widget class="QCheckBox" name="boxClearQueue">
+          <property name="text">
+           <string>Clear Q before DAQ</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item row="2" column="0">
+      <widget class="QPushButton" name="btnDAQStop">
+       <property name="font">
+        <font>
+         <pointsize>12</pointsize>
+         <bold>true</bold>
+        </font>
+       </property>
+       <property name="text">
+        <string>Stop DAQ</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1644</width>
+     <width>805</width>
      <height>22</height>
     </rect>
    </property>
