@@ -137,19 +137,24 @@ void MultiBoard::ScanBoards()
 #include <QLabel>
 void MultiBoard::UpdateLists()
 {
-    ui->listBoards->clear();
-    for (auto &board : fBoardStatus)
+    for (int idx = 0; idx < ui->listBoards->count(); idx++)
     {
-        QString status = board.second ? "Connected" : "Not connected";
-        // ui->listBoards->addItem(QString("Board No: %1\tStatus: %2").arg(board.first).arg(status));
-        auto label = new QLabel(QString("Board No:\t%1\tStatus:%2").arg(board.first).arg(status));
-        if (board.second)
+        auto item = ui->listBoards->item(idx);
+        auto label = dynamic_cast<QLabel *>(ui->listBoards->itemWidget(item));
+        auto boardNo = label->text().split("\t")[1].toInt();
+        auto status = fBoardStatus[boardNo];
+        if (status)
+        {
             label->setStyleSheet("QLabel { background-color : green; color : black; }");
+            flblConnectionStatus[boardNo]->setText("Connected");
+            flblConnectionStatus[boardNo]->setStyleSheet("QLabel { background-color : green; color : black; }");
+        }
         else
+        {
             label->setStyleSheet("QLabel { background-color : red; color : black; }");
-        auto item = new QListWidgetItem();
-        ui->listBoards->addItem(item);
-        ui->listBoards->setItemWidget(item, label);
+            flblConnectionStatus[boardNo]->setText("Not connected");
+            flblConnectionStatus[boardNo]->setStyleSheet("QLabel { background-color : red; color : black; }");
+        }
     }
 }
 
@@ -157,6 +162,32 @@ void MultiBoard::ClearLists()
 {
     ui->listBoards->clear();
     fBoardStatus.clear();
+}
+
+void MultiBoard::RefreshLists()
+{
+    ui->listBoards->clear();
+    for (auto &board : fBoardStatus)
+    {
+        QString status = board.second ? "Connected" : "Not connected";
+        // ui->listBoards->addItem(QString("Board No: %1\tStatus: %2").arg(board.first).arg(status));
+        auto label = new QLabel(QString("Board No:\t%1\tStatus:%2").arg(board.first).arg(status));
+        if (board.second)
+        {
+            label->setStyleSheet("QLabel { background-color : green; color : black; }");
+            flblConnectionStatus[board.first]->setText("Connected");
+            flblConnectionStatus[board.first]->setStyleSheet("QLabel { background-color : green; color : black; }");
+        }
+        else
+        {
+            label->setStyleSheet("QLabel { background-color : red; color : black; }");
+            flblConnectionStatus[board.first]->setText("Not connected");
+            flblConnectionStatus[board.first]->setStyleSheet("QLabel { background-color : red; color : black; }");
+        }
+        auto item = new QListWidgetItem();
+        ui->listBoards->addItem(item);
+        ui->listBoards->setItemWidget(item, label);
+    }
 }
 
 void MultiBoard::ProcessConnection()
@@ -187,17 +218,6 @@ void MultiBoard::UpdateStatus()
     // DAQ status, update status inside fBoardConnections
     for (auto &board : fBoardConnections)
     {
-        if (updateStatusFlag)
-            if (board.second->IsConnected())
-            {
-                flblConnectionStatus[board.first]->setText("Connected");
-                flblConnectionStatus[board.first]->setStyleSheet("QLabel { background-color : green; color : black; }");
-            }
-            else
-            {
-                flblConnectionStatus[board.first]->setText("Not connected");
-                flblConnectionStatus[board.first]->setStyleSheet("QLabel { background-color : red; color : black; }");
-            }
 
         flblRealCount[board.first]->setText(QString("%1/%2").arg(board.second->GetRealCount()).arg(board.second->GetRealCR()));
         flblLiveCount[board.first]->setText(QString("%1/%2").arg(board.second->GetLiveCount()).arg(board.second->GetLiveCR()));
@@ -217,14 +237,14 @@ void MultiBoard::UpdateStatus()
 void MultiBoard::handle_BoardStatus(int boardNo, bool status)
 {
     fBoardStatus[boardNo] = status;
-    UpdateLists();
+    RefreshLists();
 }
 
 void MultiBoard::handle_BoardsScanned()
 {
     ui->btnScanBoards->setEnabled(true);
 
-    UpdateLists();
+    RefreshLists();
     ProcessConnection();
 
     int nConnected = 0;
@@ -388,10 +408,15 @@ void MultiBoard::on_btnPath_clicked()
 
 void MultiBoard::on_listBoards_currentRowChanged(int currentRow)
 {
-    UpdateLists();
+    static int count = 0;
+    qDebug() << "Current Row: " << ui->listBoards->currentRow() << count++ << endl;
     auto row = currentRow;
+    UpdateLists();
+    ui->listBoards->setCurrentRow(row);
     if (row < 0 || row >= ui->listBoards->count())
+    {
         return;
+    }
     auto item = ui->listBoards->item(row);
     auto label = dynamic_cast<QLabel *>(ui->listBoards->itemWidget(item));
     if (label->text().contains("Not connected"))
@@ -834,14 +859,15 @@ bool SingleBoardJob::JudgeLoopFlag(int nEventCount)
 
 void MultiBoard::on_btnMaster_clicked()
 {
-    int board;
     int selectRow = ui->listBoards->currentRow();
+    if (selectRow < 0 || selectRow > ui->listBoards->count())
+        return;
     auto select = ui->listBoards->item(selectRow);
     auto label = dynamic_cast<QLabel *>(ui->listBoards->itemWidget(select));
 
     if (!select)
         return;
-    board = label->text().split("\t")[1].toInt();
+    int board = label->text().split("\t")[1].toInt();
     qDebug() << "Selected: " << selectRow << '\t' << select->text() << label->text() << board << endl;
     SetMasterBoard(board);
 }

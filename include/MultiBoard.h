@@ -216,6 +216,7 @@ private:
     void ScanBoards();
     void UpdateLists();
     void ClearLists();
+    void RefreshLists();
     std::map<int, bool> fBoardStatus;
     std::map<int, BoardConnection *> fBoardConnections;
 
@@ -227,6 +228,7 @@ private:
 
     // Board settings
     bool SetMasterBoard(int board = 0);
+    int fMasterBoard = 0;
     bool EnableTDC(int board = 0);
     bool EnableAllTDC();
     bool DisableAllTDC();

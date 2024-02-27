@@ -3,6 +3,7 @@
 #include <string>
 #include <iomanip>
 #include <QApplication>
+#include <TApplication.h>
 #include "MultiBoard.h"
 
 int main_waste(int argc, char *argv[])
@@ -36,6 +37,7 @@ int main_waste(int argc, char *argv[])
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
+    new TApplication("app", &argc, argv);
     MultiBoard w;
     w.show();
     a.exec();
