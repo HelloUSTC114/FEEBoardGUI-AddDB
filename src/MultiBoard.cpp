@@ -3,9 +3,12 @@
 #include "MultiBoard.h"
 #include "ui_MultiBoard.h"
 #include "feecontrol.h"
+#include "AutoScreenZoom.h"
 
 #include <QtConcurrent/QtConcurrent>
 #include <QDateTime>
+#include <QScreen>
+#include <QApplication>
 const std::vector<int> gBoardScanList = {0, 1, 2, 3, 4, 5, 6, 7};
 
 void MultiBoardJob::ScanBoards()
@@ -90,6 +93,16 @@ MultiBoard::MultiBoard(QWidget *parent) : QMainWindow(parent),
     ui->btnDAQStop->setEnabled(false);
     ui->listBoards->setSelectionMode(QAbstractItemView::SingleSelection);
 
+    // Screen Zoom
+    fAutoScreenZoom = new AutoScreenZoom(this);
+    auto screens = QApplication::screens();
+    if (screens.size() > 0)
+    {
+        connect(screens[0], &QScreen::logicalDotsPerInchChanged, fAutoScreenZoom, &AutoScreenZoom::onLogicalDotsPerInchChanged);
+    }
+    fOldWidth = 0;
+    fOldHeight = 0;
+
     // Create work thread
     fMultiBoardJob = new MultiBoardJob();
     fMultiBoardJob->moveToThread(&fMultiBoardThread);
@@ -121,6 +134,7 @@ MultiBoard::~MultiBoard()
 
     delete ui;
 
+    delete fAutoScreenZoom;
     for (auto &board : fBoardConnections)
     {
         delete board.second;
@@ -448,6 +462,46 @@ void MultiBoard::on_listBoards_itemDoubleClicked(QListWidgetItem *item)
     ui->listBoards->setCurrentItem(item);
     on_listBoards_currentRowChanged(ui->listBoards->currentRow());
     on_btnMaster_clicked();
+}
+
+void MultiBoard::resizeEvent(QResizeEvent *event)
+{
+    QMainWindow::resizeEvent(event);
+    // fAutoScreenZoom->AutoChildZoom(*this);
+
+    int width = ui->centralwidget->width();
+    int height = ui->centralwidget->height();
+    float scalewidth = 1.0;
+    float scaleheight = 1.0;
+    if (fOldHeight > 0 && fOldWidth > 0)
+    {
+        scalewidth = (float)width / (float)fOldWidth;
+        scaleheight = (float)height / (float)fOldHeight;
+    }
+
+    qDebug() << "Test resize" << scalewidth << scaleheight << endl;
+
+    auto widgets = this->findChildren<QWidget *>();
+    for (auto &o : widgets)
+    {
+        auto pWidget = dynamic_cast<QWidget *>(o);
+        // qDebug() << pWidget << o->objectName() << widgets.size() << endl;
+        if (pWidget)
+        {
+            int oldX = pWidget->x();
+            int oldY = pWidget->y();
+            pWidget->move(oldX * scalewidth, oldY * scaleheight);
+
+            int oldWidth = pWidget->width();
+            int oldHeight = pWidget->height();
+            pWidget->resize(pWidget->width() * scalewidth, pWidget->height() * scaleheight);
+            // fAutoScreenZoom->AutoChildZoom(*o);
+        }
+    }
+    fAutoScreenZoom->AutoChildZoom(*this);
+
+    fOldWidth = width;
+    fOldHeight = height;
 }
 
 #include "feecontrol.h"

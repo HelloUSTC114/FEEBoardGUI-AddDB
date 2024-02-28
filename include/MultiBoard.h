@@ -16,6 +16,7 @@ class FEEControl;
 class DataManager;
 class ConfigFileParser;
 class BoardConnection;
+class AutoScreenZoom;
 
 namespace Ui
 {
@@ -211,6 +212,12 @@ private:
     Ui::MultiBoard *ui;
     MultiBoardJob *fMultiBoardJob = nullptr;
     QThread fMultiBoardThread;
+
+    // Screen Zoom
+    AutoScreenZoom *fAutoScreenZoom = nullptr;
+    void resizeEvent(QResizeEvent *event) override;
+    int fOldWidth = 0;
+    int fOldHeight = 0;
 
     // Scan boards
     void ScanBoards();
