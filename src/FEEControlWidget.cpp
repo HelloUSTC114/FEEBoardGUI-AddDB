@@ -260,6 +260,42 @@ FEEControlWin::FEEControlWin(QWidget *parent)
     // fdrawWin2->Update();
 }
 
+void FEEControlWin::resizeEvent(QResizeEvent *event)
+{
+    QWidget::resizeEvent(event);
+    // fAutoScreenZoom->AutoChildZoom(*this);
+
+    int width = this->width();
+    int height = this->height();
+    float scalewidth = 1.0;
+    float scaleheight = 1.0;
+    if (fOldHeight > 0 && fOldWidth > 0)
+    {
+        scalewidth = (float)width / (float)fOldWidth;
+        scaleheight = (float)height / (float)fOldHeight;
+    }
+
+    auto widgets = this->findChildren<QWidget *>();
+    for (auto &o : widgets)
+    {
+        auto pWidget = dynamic_cast<QWidget *>(o);
+        // qDebug() << pWidget << o->objectName() << widgets.size() << endl;
+        if (pWidget)
+        {
+            int oldX = pWidget->x();
+            int oldY = pWidget->y();
+            pWidget->move(oldX * scalewidth, oldY * scaleheight);
+
+            int oldWidth = pWidget->width();
+            int oldHeight = pWidget->height();
+            pWidget->resize(pWidget->width() * scalewidth, pWidget->height() * scaleheight);
+        }
+    }
+
+    fOldWidth = width;
+    fOldHeight = height;
+}
+
 void FEEControlWin::Test()
 {
     std::cout << "Draw option checked id: " << fpbtngrpDrawOption->checkedId() << std::endl;

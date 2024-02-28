@@ -149,6 +149,8 @@ private:
 
 private:
     Ui::FEEControlWin *ui;
+    double fOldWidth = 0, fOldHeight = 0;
+    void resizeEvent(QResizeEvent *event) override;
 
     // FEE Board
     FEEControl *fBoard = NULL;        // FEE Control class
