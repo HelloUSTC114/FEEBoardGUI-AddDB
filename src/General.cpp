@@ -173,10 +173,9 @@ namespace UserDefine
             std::cout << "Ip Address: " << sHostIP << std::endl;
             std::cout << "Network Gate: " << sGateIP << std::endl;
 
-            if (sGateIP != "" && sGateIP != "0.0.0.0")
-            {
-                gateIPList.push_back({sGateIP, sHostIP});
-            }
+            if (sGateIP != "" && sGateIP.find("0.0.0.0") == std::string::npos)
+                if (sHostIP != "" && sHostIP.find("0.0.0.0") == std::string::npos)
+                    gateIPList.push_back({sGateIP, sHostIP});
 
             std::cout << std::endl;
             iter = iter->Next;

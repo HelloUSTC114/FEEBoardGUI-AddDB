@@ -645,7 +645,7 @@ bool BoardConnection::SetBoardConfig(std::string sRepoFolder)
     }
     else
     {
-        fParser->Init(sRepoFolder + "Configuration/CRTest/BottomLayer/sc_register_pd.txt", sRepoFolder + "Configuration/CRTest/BottomLayer/probe_register.txt");
+        fParser->Init(sRepoFolder + "Configuration/CRTest/BotLayer/sc_register_pd.txt", sRepoFolder + "Configuration/CRTest/BotLayer/probe_register.txt");
     }
     fBoard->SendConfig(fParser);
 
