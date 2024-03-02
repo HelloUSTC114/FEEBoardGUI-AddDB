@@ -541,7 +541,7 @@ double ProcessVoltageTest(int channel, int biasDAC, int nSamples, std::string sF
 #include <time.h>
 double VoltageTest(int nSamplePoints, std::string fileName, std::string sHeader)
 {
-    std::ofstream fout(fileName, std::ios::app);
+    std::ofstream fout(fileName, std::ios::out | std::ios::trunc);
     if (!fout.is_open())
     {
         std::cout << "Warning: cannot open file: " << fileName << std::endl;

@@ -351,6 +351,7 @@ void MultiBoard::on_btnDAQStart_clicked()
     ui->lblFileName->setText(QString::fromStdString(fsFileName));
 
     on_btnMaster_clicked();
+    DisableAllTDC();
     // Start DAQ for all Boards
     bool flagSuccess = 1;
     for (auto &board : fBoardConnections)
