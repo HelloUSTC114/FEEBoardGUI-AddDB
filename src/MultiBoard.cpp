@@ -674,7 +674,7 @@ bool BoardConnection::InitDataFile()
     fBoard->GetTemp(temp);
     fDataManager->SetDAQTemp(temp);
 
-    fout.open(fsFilePath + "Board" + std::to_string(fBoardNo) + fFileTimeStamp.toString("-yyyy-MM-dd-hh-mm-ss").toStdString() + "TS.txt", std::ios::out);
+    fout.open(fsFilePath + "Board" + std::to_string(fBoardNo) + fFileTimeStamp.toString("-yyyy-MM-dd-hh-mm-ss").toStdString() + "-TS.txt", std::ios::out);
 
     return true;
 }
