@@ -286,10 +286,10 @@ bool FEEControl::sipm_temp_read(double *temp)
     }
     close_socket();
 
-    printf("SiPM0_7 temperature is %.2f degrees Celsius\n", *temp);
-    printf("SiPM8_15 temperature is %.2f degrees Celsius\n", *(temp + 1));
-    printf("SiPM16_23 temperature is %.2f degrees Celsius\n", *(temp + 2));
-    printf("SiPM24_31 temperature is %.2f degrees Celsius\n", *(temp + 3));
+    // printf("SiPM0_7 temperature is %.2f degrees Celsius\n", *temp);
+    // printf("SiPM8_15 temperature is %.2f degrees Celsius\n", *(temp + 1));
+    // printf("SiPM16_23 temperature is %.2f degrees Celsius\n", *(temp + 2));
+    // printf("SiPM24_31 temperature is %.2f degrees Celsius\n", *(temp + 3));
 
     return true;
 }
@@ -916,6 +916,10 @@ int FEEControl::ReadTimeStamp(uint64_t *tsArray)
     for (;;)
     {
         auto T0IDdev = fCurrentT0ID - fPreviousT0ID;
+        
+        // Only when FEE is reset, the fCurrentT0ID will be smaller than fPreviousT0ID
+        if (fCurrentT0ID < fPreviousT0ID)
+            T0IDdev = fCurrentT0ID;
         if (T0IDdev > 5)
             T0IDdev = 5;
         if (T0IDdev == 0)

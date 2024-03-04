@@ -354,6 +354,7 @@ void MultiBoard::on_btnDAQStart_clicked()
     DisableAllTDC();
     // Start DAQ for all Boards
     bool flagSuccess = 1;
+    QDateTime timeNow = QDateTime::currentDateTime();
     for (auto &board : fBoardConnections)
     {
         if (board.second->IsConnected())
@@ -411,6 +412,7 @@ void MultiBoard::on_btnDAQStop_clicked()
     ui->btnDAQStop->setEnabled(false);
 
     std::vector<QFuture<bool>> futures;
+    QDateTime timeNow = QDateTime::currentDateTime();
 
     for (auto &board : fBoardConnections)
     {
@@ -441,7 +443,7 @@ void MultiBoard::on_btnPath_clicked()
 void MultiBoard::on_listBoards_currentRowChanged(int currentRow)
 {
     static int count = 0;
-    qDebug() << "Current Row: " << ui->listBoards->currentRow() << count++ << endl;
+    // qDebug() << "Current Row: " << ui->listBoards->currentRow() << count++ << endl;
     auto row = currentRow;
     UpdateLists();
     ui->listBoards->setCurrentRow(row);
@@ -459,7 +461,6 @@ void MultiBoard::on_listBoards_currentRowChanged(int currentRow)
 
 void MultiBoard::on_listBoards_itemDoubleClicked(QListWidgetItem *item)
 {
-    qDebug() << "Test" << endl;
     ui->listBoards->setCurrentItem(item);
     on_listBoards_currentRowChanged(ui->listBoards->currentRow());
     on_btnMaster_clicked();
@@ -480,7 +481,7 @@ void MultiBoard::resizeEvent(QResizeEvent *event)
         scaleheight = (float)height / (float)fOldHeight;
     }
 
-    qDebug() << "Test resize" << scalewidth << scaleheight << endl;
+    // qDebug() << "Test resize" << scalewidth << scaleheight << endl;
 
     auto widgets = this->findChildren<QWidget *>();
     for (auto &o : widgets)
@@ -673,7 +674,7 @@ bool BoardConnection::InitDataFile()
     fBoard->GetTemp(temp);
     fDataManager->SetDAQTemp(temp);
 
-    fout.open(fsFilePath + "Board" + std::to_string(fBoardNo) + "TS.txt", std::ios::app);
+    fout.open(fsFilePath + "Board" + std::to_string(fBoardNo) + fFileTimeStamp.toString("-yyyy-MM-dd-hh-mm-ss").toStdString() + "TS.txt", std::ios::out);
 
     return true;
 }
@@ -688,7 +689,8 @@ bool BoardConnection::StartDAQ()
 
     fDAQRuningFlag = true;
     fBoard->HVON();
-    fMonitorTimer.start(1000);
+    fMonitorTimer.setInterval(1000);
+    fMonitorTimer.start();
 
     emit RequestStartDAQ();
 
@@ -941,6 +943,6 @@ void MultiBoard::on_btnMaster_clicked()
     if (!select)
         return;
     int board = label->text().split("\t")[1].toInt();
-    qDebug() << "Selected: " << selectRow << '\t' << select->text() << label->text() << board << endl;
+    // qDebug() << "Selected: " << selectRow << '\t' << select->text() << label->text() << board << endl;
     SetMasterBoard(board);
 }
