@@ -688,7 +688,6 @@ bool BoardConnection::StartDAQ()
     InitDataFile();
 
     fDAQRuningFlag = true;
-    fBoard->HVON();
     fMonitorTimer.setInterval(1000);
     fMonitorTimer.start();
 
@@ -893,6 +892,7 @@ void SingleBoardJob::handle_StartDAQ()
 {
     int nDAQLoop = 0;
     int nDAQEventCount = 0;
+    fBoard->HVON();
     QThread::msleep(1000); // Wait for 1s to make sure the board is ready (for the first time only
     fConnection->fDAQStartTime = QDateTime::currentDateTime();
 

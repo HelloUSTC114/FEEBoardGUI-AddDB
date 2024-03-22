@@ -175,7 +175,7 @@
 1 % Enable DAC2
 1 % Disable DAC2 power pulsing mode (force ON)
 0011100000 % 10-bit DAC1 (MSB-LSB): 00 1100 0000 for 0.5 p.e. charge discriminator threshold
-0100000000 % 10-bit DAC2 (MSB-LSB): 00 1100 0000 for 0.5 p.e. time discriminator threshold
+0100011000 % 10-bit DAC2 (MSB-LSB): 00 1100 0000 for 0.5 p.e. time discriminator threshold
 1 % Enable High Gain OTA%  -- start byte 
 1 % Disable High Gain OTA power pulsing mode (force ON)
 1 % Enable Low Gain OTA
