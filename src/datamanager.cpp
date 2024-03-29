@@ -67,8 +67,11 @@ bool DataManager::IsOpen()
     return fFile->IsOpen();
 }
 
+#include <QMutex>
+QMutex gmutex;
 bool DataManager::Init(string sInput)
 {
+    gmutex.lock();
     if (fFile)
         Close();
 
@@ -76,7 +79,11 @@ bool DataManager::Init(string sInput)
 
     fFile = new TFile(sFileName.c_str(), "recreate");
     if (!fFile->IsOpen())
+    {
+        gmutex.unlock();
         return false;
+    }
+    fFile->cd();
     fTree = new TTree("fifo", "Fifo Data");
     fHGTree = new TTree("HGTree", "HG Data");
     fLGTree = new TTree("LGTree", "LG Data");
@@ -86,9 +93,9 @@ bool DataManager::Init(string sInput)
     {
         fHGHist[i] = new TH1S(Form("hHG%d", i), Form("High Gain ch%d", i), 16384, 0, 65536);
         fLGHist[i] = new TH1S(Form("hLG%d", i), Form("Low Gain ch%d", i), 16384, 0, 65536);
-        fTDCHist[i] = new TH1I(Form("hTDC%d", i), Form("TDC Value ch%d", i), 2 ^ 16, 0, 2 ^ 32);
+        fTDCHist[i] = new TH1I(Form("hTDC%d", i), Form("TDC Value ch%d", i), 65536, 0, 65536.0 * 65536.0);
     }
-    fTDCHist[32] = new TH1I(Form("hTDC%d", 32), Form("TDC Value ch%d", 32), 2 ^ 16, 0, 2 ^ 32);
+    fTDCHist[32] = new TH1I(Form("hTDC%d", 32), Form("TDC Value ch%d", 32), 65536, 0, 65536.0 * 65536.0);
 
     // fTree->Branch("data", fPreviousData, "data[1600]/i");
     fHGTree->Branch("chHG", fHGamp, "chHG[32]/D");
@@ -103,11 +110,26 @@ bool DataManager::Init(string sInput)
     fLGTree->AutoSave();
     fTDCTree->AutoSave();
     ClearBuffer();
+    gmutex.unlock();
     return true;
 }
 
 void DataManager::Close()
 {
+    if (!fFile)
+    {
+        memset(fHGHist, '\0', N_BOARD_CHANNELS * sizeof(TH1S *));
+        memset(fLGHist, '\0', N_BOARD_CHANNELS * sizeof(TH1S *));
+        memset(fTDCHist, '\0', N_BOARD_CHANNELS * sizeof(TH1S *));
+
+        fFile = NULL;
+        fHGTree = NULL;
+        fLGTree = NULL;
+        fTDCTree = NULL;
+        ClearBuffer();
+        return;
+    }
+
     fFile->cd();
     if (fDatimeFlag)
     {

@@ -27,6 +27,8 @@ class FEEControlWin;
 class PlotWindow;
 class ROOTDraw;
 class FTAnalyzerWin;
+class FEEControl;
+class DataManager;
 
 class QCheckBox;
 class QLabel;
@@ -67,6 +69,8 @@ class FEEControlWin : public QWidget
 
 public:
     ~FEEControlWin();
+    FEEControl *GetBoard() { return fBoard; }
+    DataManager *GetDataManager() { return fDataManager; }
     static FEEControlWin *Instance(); // Forbidden create FEEControlWin by user
     void setParent(QWidget *parent = nullptr) { QWidget::setParent(parent); }
     int GetBoardNo() { return fCurrentBoardNo; }
@@ -145,8 +149,11 @@ private:
 
 private:
     Ui::FEEControlWin *ui;
+    double fOldWidth = 0, fOldHeight = 0;
+    void resizeEvent(QResizeEvent *event) override;
 
     // FEE Board
+    FEEControl *fBoard = NULL;        // FEE Control class
     volatile bool fConnected = false; // Whether board is connected
     int fCurrentBoardNo = -1;         // Current board number
 
@@ -180,8 +187,9 @@ private:
     bool ReadTimeStamp();
 
     // DAQ File Manager
-    bool GenerateROOTFile(); // Generate root file
-    void CloseSaveFile();    // Close ROOT File
+    DataManager *fDataManager = NULL; // Data Manager
+    bool GenerateROOTFile();          // Generate root file
+    void CloseSaveFile();             // Close ROOT File
 
     QString fsFilePath = "../MuonTestControl/Data"; // Save ROOT File Path
     QString fsFileName = "Data";                    // Save ROOT File Name without time stamp

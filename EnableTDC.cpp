@@ -2,7 +2,11 @@
 #include <iostream>
 #include <string>
 #include <iomanip>
-int main(int argc, char *argv[])
+#include <QApplication>
+#include <TApplication.h>
+#include "MultiBoard.h"
+
+int main_waste(int argc, char *argv[])
 {
     int flag = 1;
     if (argc >= 2)
@@ -27,5 +31,15 @@ int main(int argc, char *argv[])
         rtn = gBoard->enable_tdc(flag);
         std::cout << std::setprecision(5) << "Board No: " << boardNo << '\t' << "Enable TDC: " << flag << "\tSuccess: " << rtn << std::endl;
     }
+    return 0;
+}
+
+int main(int argc, char *argv[])
+{
+    QApplication a(argc, argv);
+    new TApplication("app", &argc, argv);
+    MultiBoard w;
+    w.show();
+    a.exec();
     return 0;
 }

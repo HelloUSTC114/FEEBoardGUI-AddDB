@@ -167,18 +167,17 @@ namespace UserDefine
         auto iter = pIpAdapterInfo;
         while (iter)
         {
-            std::cout << "Ip Adapter: " << iter->Description << std::endl;
+            // std::cout << "Ip Adapter: " << iter->Description << std::endl;
             std::string sHostIP = iter->IpAddressList.IpAddress.String;
             std::string sGateIP = iter->GatewayList.IpAddress.String;
-            std::cout << "Ip Address: " << sHostIP << std::endl;
-            std::cout << "Network Gate: " << sGateIP << std::endl;
+            // std::cout << "Ip Address: " << sHostIP << std::endl;
+            // std::cout << "Network Gate: " << sGateIP << std::endl;
 
-            if (sGateIP != "" && sGateIP != "0.0.0.0")
-            {
-                gateIPList.push_back({sGateIP, sHostIP});
-            }
+            if (sGateIP != "" && sGateIP.find("0.0.0.0") == std::string::npos)
+                if (sHostIP != "" && sHostIP.find("0.0.0.0") == std::string::npos)
+                    gateIPList.push_back({sGateIP, sHostIP});
 
-            std::cout << std::endl;
+            // std::cout << std::endl;
             iter = iter->Next;
         }
 
@@ -195,13 +194,15 @@ namespace UserDefine
             return "";
 
         auto sIP = list1[0].first;
-        std::stringstream ss(sIP);
+        static std::stringstream gss;
+        gss.clear();
+        gss.str(sIP);
         std::string sParsed, sTotal;
-        std::getline(ss, sParsed, '.');
+        std::getline(gss, sParsed, '.');
         sTotal += sParsed + ".";
-        std::getline(ss, sParsed, '.');
+        std::getline(gss, sParsed, '.');
         sTotal += sParsed + ".";
-        std::getline(ss, sParsed, '.');
+        std::getline(gss, sParsed, '.');
         sTotal += sParsed + ".";
         return sTotal;
     }

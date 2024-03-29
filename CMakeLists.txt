@@ -45,28 +45,6 @@ set(PROJECT_SOURCES
     ${sources}
     ${headers}
 
-    # include/FEEControlWidget.h
-    # src/FEEControlWidget.ui
-    # src/FEEControlWidget.cpp
-
-    # include/feecontrol.h
-    # src/feecontrol.cpp
-
-    # include/datamanager.h
-    # src/datamanager.cpp
-
-    # include/configfileparser.h
-    # src/configfileparser.cpp
-
-    # include/ROOTDraw.h
-    # src/ROOTDraw.cpp
-    # src/ROOTDraw.ui
-
-    # include/VDeviceController.h
-    # src/VDeviceController.cpp
-
-    # include/General.h
-    # src/General.cpp
 )
 
 # User define ZABER Motion Control lib
@@ -137,32 +115,6 @@ endif()
 add_executable(FEEDistri ${FEEDISTRIMAIN} ${PROJECT_SOURCES})
 add_executable(EnableTDC EnableTDC.cpp ${PROJECT_SOURCES})
 
-
-# if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
-#     qt_add_executable(FEEDistri
-#         MANUAL_FINALIZATION
-#         ${PROJECT_SOURCES}
-#     )
-
-
-# # Define target properties for Android with Qt 6 as:
-# # set_property(TARGET FEEDistri APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
-# # ${CMAKE_CURRENT_SOURCE_DIR}/android)
-# # For more information, see https://doc.qt.io/qt-6/qt-add-executable.html#target-creation
-# else()
-#     if(ANDROID)
-#         add_library(FEEDistri SHARED
-#         ${PROJECT_SOURCES}
-#         )
-
-#     # Define properties for Android with Qt 5 after find_package() calls as:
-#     # set(ANDROID_PACKAGE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android")
-#     else()
-#         add_executable(FEEDistri
-#         ${PROJECT_SOURCES}
-#         )
-#     endif()
-# endif()
 
 target_link_libraries(FEEDistri PRIVATE Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Sql
 )
