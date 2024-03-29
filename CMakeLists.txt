@@ -12,13 +12,13 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # User defined library option
-set(USE_VISA ON)
-set(USE_ZABER ON)
+set(USE_VISA OFF)
+set(USE_ZABER OFF)
 set(USE_VLD_CHECK OFF)
 
 # Define Macros, enable/disable some functions 
-set(DISABLE_AUTO_ENABLE_TDC ON)
-set(DISABLE_AUTO_DRAW_WHILE_DAQ ON)
+set(DISABLE_AUTO_ENABLE_TDC OFF)
+set(DISABLE_AUTO_DRAW_WHILE_DAQ OFF)
 
 find_package(QT NAMES Qt5 REQUIRED COMPONENTS Widgets Sql Concurrent)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Sql)
@@ -112,16 +112,17 @@ endif()
 # set_target_properties(FEEGUI PROPERTIES OUTPUT_NAME "FEEGUI")
 # set (LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib)
 
-add_executable(FEEDistri ${FEEDISTRIMAIN} ${PROJECT_SOURCES})
-add_executable(EnableTDC EnableTDC.cpp ${PROJECT_SOURCES})
+add_executable(SingleBoard ${FEEDISTRIMAIN} ${PROJECT_SOURCES})
+add_executable(MultiBoard EnableTDC.cpp ${PROJECT_SOURCES})
 
 
-target_link_libraries(FEEDistri PRIVATE Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Sql
+
+target_link_libraries(SingleBoard PRIVATE Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Sql
 )
-target_link_libraries(EnableTDC PRIVATE Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Sql
+target_link_libraries(MultiBoard PRIVATE Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Sql
 )
 
-set_target_properties(FEEDistri PROPERTIES
+set_target_properties(SingleBoard PROPERTIES
     MACOSX_BUNDLE_GUI_IDENTIFIER my.example.com
     MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
     MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
@@ -130,5 +131,5 @@ set_target_properties(FEEDistri PROPERTIES
 )
 
 if(QT_VERSION_MAJOR EQUAL 6)
-    qt_finalize_executable(FEEDistri)
+    qt_finalize_executable(SingleBoard)
 endif()
