@@ -560,7 +560,8 @@ int DataManager::ProcessADCEvents(int adcNo, const uint16_t *src_data, int dataL
         }
         else
         {
-            std::cout << "Error while Processing ADC: error inside Manager buffer" << std::endl;
+            std::cout << "BoardNo:" << fBoardNo << " "
+                      << "Error while Processing ADC: error inside Manager buffer" << std::endl;
         }
 
         // Judge whether contains 2 heads
@@ -591,7 +592,8 @@ int DataManager::ProcessADCEvents(int adcNo, const uint16_t *src_data, int dataL
             }
             else
             {
-                std::cout << "Error while Processing ADC: error for 2nd data inside Manager buffer" << std::endl;
+                std::cout << "BoardNo:" << fBoardNo << " "
+                          << "Error while Processing ADC: error for 2nd data inside Manager buffer" << std::endl;
             }
         }
         fADCBufCount[adcNo] = 0;
@@ -624,7 +626,8 @@ int DataManager::ProcessADCEvents(int adcNo, const uint16_t *src_data, int dataL
                 return totalEventCounter;
             else
             {
-                std::cout << "Error while Processing ADC: error in normal Processing" << std::endl;
+                std::cout << "BoardNo:" << fBoardNo << " "
+                          << "Error while Processing ADC: error in normal Processing" << std::endl;
                 idx_search += idx_processed;
                 continue;
             }
@@ -649,7 +652,8 @@ bool DataManager::ProcessOneADCEvent(const uint16_t *const iter_first, const uin
     if ((iter_end - iter_first) < 175)
     {
         idx_processed = 0;
-        std::cout << "Error while processing ADC: only " << iter_end - iter_first << " points left." << std::endl;
+        std::cout << "BoardNo:" << fBoardNo << " "
+                  << "Error while processing ADC: only " << iter_end - iter_first << " points left." << std::endl;
         return false;
     }
 
@@ -657,7 +661,8 @@ bool DataManager::ProcessOneADCEvent(const uint16_t *const iter_first, const uin
     if (*(iter_first) != 65535 || *(iter_first + 1) != 65535)
     {
         idx_processed = 2;
-        std::cout << "Error while processing ADC: Cannot find head" << std::endl;
+        std::cout << "BoardNo:" << fBoardNo << " "
+                  << "Error while processing ADC: Cannot find head" << std::endl;
         return false;
     }
     // Process trigger id
@@ -668,7 +673,8 @@ bool DataManager::ProcessOneADCEvent(const uint16_t *const iter_first, const uin
     {
         if (*(iter_first + i) == 65535)
         {
-            std::cout << "Error while processing ADC: only " << i << " points between two heads." << std::endl;
+            std::cout << "BoardNo:" << fBoardNo << " "
+                      << "Error while processing ADC: only " << i << " points between two heads." << std::endl;
 
             idx_processed = i;
             return false;
@@ -869,7 +875,7 @@ int DataManager::ProcessTDCEvents(const uint16_t *src_data, int dataLength)
         }
         if (headFirst == fTDCLengthFactor + 1)
         {
-            std::cout << "Error: cannot find head in first event!" << std::endl;
+            std::cout << "BoardNo:" << fBoardNo << "Error: cannot find head in first event!" << std::endl;
             return 0;
         }
 
@@ -888,7 +894,7 @@ int DataManager::ProcessTDCEvents(const uint16_t *src_data, int dataLength)
         }
         else
         {
-            std::cout << "Error: Invalid TDC Data in buffer processing!" << std::endl;
+            std::cout << "BoardNo:" << fBoardNo << "Error: Invalid TDC Data in buffer processing!" << std::endl;
         }
         fTDCBufCount = 0;
     }
@@ -900,7 +906,8 @@ int DataManager::ProcessTDCEvents(const uint16_t *src_data, int dataLength)
         bool flagHead = (tdcdata[idx_search] == 65535 && tdcdata[idx_search + 1] == 65535);
         if (!flagHead && (idx_search == headFirst) && (headFirst != 0))
         {
-            std::cout << "Error while process first head." << std::endl;
+            std::cout << "BoardNo:" << fBoardNo << " "
+                      << "Error while process first head." << std::endl;
         }
 
         if (!flagHead)
@@ -927,7 +934,7 @@ int DataManager::ProcessTDCEvents(const uint16_t *src_data, int dataLength)
             else
             {
                 idx_search += idx_processed;
-                std::cout << "Error: Invalid TDC Data in normal processing!" << std::endl;
+                std::cout << "BoardNo:" << fBoardNo << "Error: Invalid TDC Data in normal processing!" << std::endl;
                 continue;
             }
         }
@@ -964,7 +971,7 @@ bool DataManager::ProcessOneTDCEvent(const uint16_t *const iter_first, const uin
     // Process data in buffer requires inputlength == fTDCLengthFactor, else set it as failure
     if (inputLength < fTDCLengthFactor || inputLength == fTDCLengthFactor + 1)
     {
-        std::cout << "Error in processing one TDC data: input length too short." << inputLength << std::endl;
+        std::cout << "BoardNo:" << fBoardNo << "Error in processing one TDC data: input length too short." << inputLength << std::endl;
         return false;
     }
 
@@ -978,7 +985,7 @@ bool DataManager::ProcessOneTDCEvent(const uint16_t *const iter_first, const uin
                 if (((*iter) == 65535) && (*(iter + 1) == 65535))
                     dataLength = (int)(iter - iter_first);
             // If not find next head, tell call function to break, data is broken
-            std::cout << "Error in processign one data: next header does not match 136 constrains. DataLength: " << inputLength << std::endl;
+            std::cout << "BoardNo:" << fBoardNo << "Error in processign one data: next header does not match 136 constrains. DataLength: " << inputLength << std::endl;
             return false;
         }
     }
