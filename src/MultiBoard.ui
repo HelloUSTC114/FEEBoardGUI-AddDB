@@ -648,9 +648,9 @@
           </property>
           <property name="time">
            <time>
-            <hour>0</hour>
+            <hour>4</hour>
             <minute>0</minute>
-            <second>45</second>
+            <second>0</second>
            </time>
           </property>
          </widget>

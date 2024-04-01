@@ -237,7 +237,7 @@ void MultiBoard::UpdateStatus()
 
         flblRealCount[board.first]->setText(QString("%1/%2").arg(board.second->GetRealCount()).arg(board.second->GetRealCR()));
         flblLiveCount[board.first]->setText(QString("%1/%2").arg(board.second->GetLiveCount()).arg(board.second->GetLiveCR()));
-        flblT0TS[board.first]->setText(QString("%1").arg(board.second->GetTimeStampArrayStore()[0]));
+        flblT0TS[board.first]->setText(QString("%1").arg(board.second->GetTimeStampArrayStore()[0] / 1e9));
 
         if (board.second->GetDAQRuningFlag())
         {
@@ -439,7 +439,6 @@ void MultiBoard::on_btnDAQStop_clicked()
     ui->btnStartLoop->setEnabled(true);
     ui->btnDAQStop->setEnabled(false);
     QTimer::singleShot(1000, this, &MultiBoard::ProcessDAQFile);
-
 }
 
 #include <QFileDialog>
