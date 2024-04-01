@@ -1057,6 +1057,7 @@ void MultiBoard::UpdateCountDown()
 {
     QTime time;
     time = QTime::fromMSecsSinceStartOfDay(fAutoDAQTimer.remainingTime());
+    ui->lcdCountDown->setDigitCount(8);
     ui->lcdCountDown->display(time.toString("HH:mm:ss"));
 }
 
