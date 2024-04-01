@@ -10,7 +10,7 @@ class ConfigFileParser
 {
 public:
     ConfigFileParser();
-    bool Init(std::string scFileName = "../FEEBoardGUI/Configuration/CRTest/sc_register_pd.txt", std::string probeFileName = "../FEEBoardGUI/Configuration/CRTest/probe_register.txt");
+    bool Init(std::string scFileName = "../FEEBoardGUI/Configuration/sc_register_pd.txt", std::string probeFileName = "../FEEBoardGUI/Configuration/probe_register.txt");
     static bool ProcessConfigFile(std::string scFileName, std::string probeFileName, std::string &sVoidOut);
     bool PrintConfigFile(std::string scFileName, std::string probeFileName); // Print Config to Files
     inline const std::string &GetString() { return sConfig; }

@@ -81,13 +81,14 @@ public:
 
     bool IsConnected() { return fConnectionStatus; }
 
-    void SetDAQConfig(int nCount = -1, QTime time = QTime(0, 0, 0, 0), int nBufferSleepms = 200, int nBufferLeastEvents = 30, bool bClearQueue = 0);
+    void SetDAQConfig(int nCount = -1, QTime time = QTime(0, 0, 0, 0), int nBufferSleepms = 200, int nBufferLeastEvents = 1, bool bClearQueue = 0);
     void SetFilePathName(std::string sFilePath = "", std::string sFileName = "");
 
     // Get Status
     int GetBoardNo() { return fBoardNo; }
     bool GetConnectionStatus() { return fConnectionStatus; }
     bool GetDAQRuningFlag() { return fDAQRuningFlag; }
+    bool GetDAQRuningStatus() { return fDAQRuningStatus; }
     int GetDAQSettingCount() { return fDAQSettingCount; }
     QTime GetDAQSettingTime() { return fDAQSettingTime; }
     int GetDAQBufferSleepms() { return fDAQBufferSleepms; }
@@ -152,9 +153,10 @@ private:
     int fDAQSettingCount = -1;         // -1 means DAQ forever until stopDAQ clicked
     QTime fDAQSettingTime{0, 0, 0, 0}; // DAQ time setting, 0,0,0,0 means forever until stopDAQ clicked
     int fDAQBufferSleepms = 200;       // FEE control while DAQ, Wait time of buffer reading
-    int fDAQBufferLeastEvents = 30;    // FEE control while DAQ, Only when buffer length larger than this, Fifo data will be readout
+    int fDAQBufferLeastEvents = 1;    // FEE control while DAQ, Only when buffer length larger than this, Fifo data will be readout
     bool fFlagClearQueue = 0;          // FEE control before DAQ, give signal whether clear Queue before DAQ
     volatile bool fDAQRuningFlag = 0;  // DAQ runing flag, used to break daq process
+    volatile bool fDAQRuningStatus = 0; // DAQ status flag, used to mark whether DAQ is running
     // Used before DAQ
     bool InitDataFile();
 
@@ -258,8 +260,24 @@ private:
     int fDAQSettingCount = -1;         // -1 means DAQ forever until stopDAQ clicked
     QTime fDAQSettingTime{0, 0, 0, 0}; // DAQ time setting, 0,0,0,0 means forever until stopDAQ clicked
     int fDAQBufferSleepms = 200;       // FEE control while DAQ, Wait time of buffer reading
-    int fDAQBufferLeastEvents = 30;    // FEE control while DAQ, Only when buffer length larger than this, Fifo data will be readout
+    int fDAQBufferLeastEvents = 1;    // FEE control while DAQ, Only when buffer length larger than this, Fifo data will be readout
     bool fFlagClearQueue = 0;          // FEE control before DAQ, give signal whether clear Queue before DAQ
+
+    bool fDAQRuningFlag = 0; // DAQ runing flag
+
+    // Process DAQ File
+    void ProcessDAQFile();
+    QDateTime fTotalDAQTimeStamp;
+
+    // Auto DAQ Settings
+    QTimer fAutoDAQTimer;
+    QTimer fAutoDAQCountDownTimer;
+    QTime fLoopTime;
+    int fLoopCounter = 0;
+    bool fLoopFlag = 0;
+    void UpdateCountDown();
+    void ProcessLastDAQDown();
+    void ProcessStartDAQ();
 
 signals:
     void StartScanBoards(); // Start scanning boards
@@ -274,6 +292,9 @@ private slots:
     void on_btnMaster_clicked();
     void on_listBoards_currentRowChanged(int currentRow);
     void on_listBoards_itemDoubleClicked(QListWidgetItem *item);
+    void on_btnStartLoop_clicked();
+    void on_btnStopLoop_clicked();
+    void on_btnClearCounter_clicked();
 };
 
 #endif // MULTIBOARD_H

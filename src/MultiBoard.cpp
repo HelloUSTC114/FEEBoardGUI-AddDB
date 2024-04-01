@@ -90,7 +90,9 @@ MultiBoard::MultiBoard(QWidget *parent) : QMainWindow(parent),
     }
 
     ui->grpDAQStart->setEnabled(false);
+    ui->grpAutoDAQ->setEnabled(false);
     ui->btnDAQStop->setEnabled(false);
+    ui->btnStopLoop->setEnabled(false);
     ui->listBoards->setSelectionMode(QAbstractItemView::SingleSelection);
 
     // Screen Zoom
@@ -269,13 +271,17 @@ void MultiBoard::handle_BoardsScanned()
     if (nConnected > 0)
     {
         ui->grpDAQStart->setEnabled(true);
+        ui->grpAutoDAQ->setEnabled(true);
         ui->btnDAQStart->setEnabled(true);
+        ui->btnStartLoop->setEnabled(true);
         SetMasterBoard(masterBoard);
     }
     else
     {
         ui->grpDAQStart->setEnabled(false);
+        ui->grpAutoDAQ->setEnabled(false);
         ui->btnDAQStart->setEnabled(false);
+        ui->btnStartLoop->setEnabled(false);
     }
 }
 
@@ -341,7 +347,10 @@ void MultiBoard::on_btnDAQStart_clicked()
 {
     ui->btnScanBoards->setEnabled(false);
     ui->btnDAQStart->setEnabled(false);
+    ui->btnStartLoop->setEnabled(false);
     ui->btnDAQStop->setEnabled(true);
+    fDAQRuningFlag = 1;
+    fTotalDAQTimeStamp = QDateTime::currentDateTime();
 
     auto fileName = ui->lblFileName->text();
     if (fileName == "")
@@ -407,10 +416,6 @@ void MultiBoard::on_btnDAQStart_clicked()
 
 void MultiBoard::on_btnDAQStop_clicked()
 {
-    ui->btnScanBoards->setEnabled(true);
-    ui->btnDAQStart->setEnabled(true);
-    ui->btnDAQStop->setEnabled(false);
-
     std::vector<QFuture<bool>> futures;
     QDateTime timeNow = QDateTime::currentDateTime();
 
@@ -426,6 +431,15 @@ void MultiBoard::on_btnDAQStop_clicked()
         future.waitForFinished();
 
     DisableAllTDC();
+
+    fDAQRuningFlag = 0;
+
+    ui->btnScanBoards->setEnabled(true);
+    ui->btnDAQStart->setEnabled(true);
+    ui->btnStartLoop->setEnabled(true);
+    ui->btnDAQStop->setEnabled(false);
+    QTimer::singleShot(1000, this, &MultiBoard::ProcessDAQFile);
+
 }
 
 #include <QFileDialog>
@@ -754,6 +768,7 @@ void BoardConnection::handle_DAQFinished(int nDAQLoop)
     fDataManager->Close();
     fout.close();
     fBoard->HVOFF();
+    fDAQRuningStatus = 0;
 }
 
 bool BoardConnection::MonitorDAQ()
@@ -890,6 +905,7 @@ SingleBoardJob::SingleBoardJob(BoardConnection *conn)
 
 void SingleBoardJob::handle_StartDAQ()
 {
+    fConnection->fDAQRuningStatus = 1;
     int nDAQLoop = 0;
     int nDAQEventCount = 0;
     fBoard->HVON();
@@ -945,4 +961,122 @@ void MultiBoard::on_btnMaster_clicked()
     int board = label->text().split("\t")[1].toInt();
     // qDebug() << "Selected: " << selectRow << '\t' << select->text() << label->text() << board << endl;
     SetMasterBoard(board);
+}
+
+void MultiBoard::on_btnStartLoop_clicked()
+{
+    if (fDAQRuningFlag)
+        return;
+    fLoopTime = ui->timeLoop->time();
+
+    // Connect the signal and slot
+    connect(&fAutoDAQTimer, &QTimer::timeout, this, &MultiBoard::ProcessLastDAQDown);
+    connect(&fAutoDAQCountDownTimer, &QTimer::timeout, this, &MultiBoard::UpdateCountDown);
+
+    fLoopFlag = 1;
+    // Start DAQ when the button is pushed.
+    on_btnDAQStart_clicked();
+    fAutoDAQTimer.start(fLoopTime.msecsSinceStartOfDay());
+    fAutoDAQCountDownTimer.start(1000);
+
+    ui->btnStartLoop->setEnabled(0);
+    ui->btnStopLoop->setEnabled(1);
+    ui->btnClearCounter->setEnabled(0);
+}
+
+void MultiBoard::on_btnStopLoop_clicked()
+{
+    ui->btnStartLoop->setEnabled(1);
+    ui->btnStopLoop->setEnabled(0);
+    ui->btnClearCounter->setEnabled(1);
+    fLoopFlag = 0;
+
+    fAutoDAQTimer.stop();
+    fAutoDAQCountDownTimer.stop();
+    if (fDAQRuningFlag)
+        on_btnDAQStop_clicked();
+
+    // Disconnect the signal and slot
+    disconnect(&fAutoDAQTimer, &QTimer::timeout, this, &MultiBoard::ProcessLastDAQDown);
+    disconnect(&fAutoDAQCountDownTimer, &QTimer::timeout, this, &MultiBoard::UpdateCountDown);
+
+    on_btnClearCounter_clicked();
+}
+
+void MultiBoard::on_btnClearCounter_clicked()
+{
+    fLoopCounter = 0;
+    ui->lcdLoopCounter->display(fLoopCounter);
+    ui->lcdCountDown->display("00:00:00");
+}
+
+#include <QDir>
+#include <QFileInfo>
+#include <QFile>
+#include <QtGui/private/qzipwriter_p.h>
+void MultiBoard::ProcessDAQFile()
+{
+    qDebug() << "Processing DAQ files:";
+    if (fDAQRuningFlag)
+        return;
+    if (fsFilePath == "")
+        fsFilePath = "../Data/";
+    QDir dir(QString::fromStdString(fsFilePath));
+    qDebug() << "File Path: " << QString::fromStdString(fsFilePath);
+    if (!dir.exists())
+        dir.mkpath(".");
+    auto subDir = fTotalDAQTimeStamp.toString("yyyy-MM-dd-hh-mm-ss");
+    dir.mkdir(subDir);
+    QStringList filters;
+    filters << "*.root" << "*.txt";
+    QStringList files = dir.entryList(filters, QDir::Files, QDir::Name);
+    for (auto file : files)
+    {
+        QFileInfo fileInfo(dir, file);
+        auto x1 = QFile::rename(fileInfo.absoluteFilePath(), dir.absoluteFilePath(subDir) + "/" + file);
+    }
+
+    // dir.mkpath(fTotalDAQTimeStamp.toString("yyyy-MM-dd-hh-mm-ss"));
+    auto writer = new QZipWriter(dir.absoluteFilePath(subDir) + "/" + subDir + ".zip");
+    writer->setCompressionPolicy(QZipWriter::AutoCompress);
+    for (auto file : files)
+    {
+        QFile ff(dir.absoluteFilePath(subDir + "/" + file));
+        if (ff.open(QIODevice::ReadOnly))
+        {
+            writer->addFile(file, ff.readAll());
+            ff.close();
+        }
+    }
+    writer->close();
+    if (writer)
+        delete writer;
+    qDebug() << "Zip file finished!";
+}
+
+void MultiBoard::UpdateCountDown()
+{
+    QTime time;
+    time = QTime::fromMSecsSinceStartOfDay(fAutoDAQTimer.remainingTime());
+    ui->lcdCountDown->display(time.toString("HH:mm:ss"));
+}
+
+void MultiBoard::ProcessLastDAQDown()
+{
+    ui->btnDAQStop->click();
+    std::cout << "DAQ finished!" << std::endl;
+    fLoopCounter++;
+    ui->lcdLoopCounter->display(fLoopCounter);
+    // ui->btnDAQStart->click();
+    fAutoDAQTimer.stop();
+    QTimer::singleShot(10000, this, &MultiBoard::ProcessStartDAQ);
+}
+
+void MultiBoard::ProcessStartDAQ()
+{
+    if (fLoopFlag)
+    {
+        fAutoDAQTimer.start(fLoopTime.msecsSinceStartOfDay());
+        on_btnDAQStart_clicked();
+    }
 }

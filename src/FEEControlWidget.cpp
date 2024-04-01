@@ -1458,7 +1458,7 @@ int FEEControlWin::GetSelectLogic()
 
 void FEEControlWin::on_btnCITIROC_Path_clicked()
 {
-    sCITIROC_Config_Path = QFileDialog::getExistingDirectory(this, tr("Choosing CITIROC Configuration File Path"), QDir::currentPath() + "/../FEEBoardGUI-AddDB/Configuration/CRTest/");
+    sCITIROC_Config_Path = QFileDialog::getExistingDirectory(this, tr("Choosing CITIROC Configuration File Path"), QDir::currentPath() + "/../FEEBoardGUI-AddDB/Configuration/");
     ui->lineCITIROC_Path->setText(sCITIROC_Config_Path);
     QDir dir(sCITIROC_Config_Path);
 

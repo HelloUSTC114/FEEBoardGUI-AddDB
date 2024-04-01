@@ -28,6 +28,9 @@ include_directories("include/")
 file(GLOB sources ${PROJECT_SOURCE_DIR}/src/*.cpp ${PROJECT_SOURCE_DIR}/src/*.ui)
 file(GLOB headers ${PROJECT_SOURCE_DIR}/include/*.h)
 
+# message(Test: ${Qt5Gui_PRIVATE_INCLUDE_DIRS})
+include_directories(${Qt5Gui_PRIVATE_INCLUDE_DIRS})
+
 # message(${VISA64} ${NIVISA64})
 # link_libraries(Concurrent)
 link_libraries(Ws2_32)
