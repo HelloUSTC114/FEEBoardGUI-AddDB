@@ -9,7 +9,8 @@
 #include <QDateTime>
 #include <QScreen>
 #include <QApplication>
-const std::vector<int> gBoardScanList = {0, 1, 2, 3, 4, 5, 6, 7};
+// const std::vector<int> gBoardScanList = {0, 1, 2, 3, 4, 5, 6, 7};
+const std::vector<int> gBoardScanList = {9};
 
 void MultiBoardJob::ScanBoards()
 {
@@ -629,7 +630,7 @@ bool BoardConnection::SetMasterBoard(bool bMaster)
 {
     if (fConnectionStatus == 0)
         return false;
-    return fBoard->write_reg_test(55, bMaster);
+    return fBoard->enable_t0(bMaster);
 }
 
 bool BoardConnection::SetHV(double hv)

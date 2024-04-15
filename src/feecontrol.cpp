@@ -429,6 +429,11 @@ bool FEEControl::enable_tdc(bool flag)
     return write_reg_test(54, flag);
 }
 
+bool FEEControl::enable_t0(bool flag)
+{
+    return write_reg_test(55, flag);
+}
+
 bool FEEControl::length_read(cmd_up cmd, int &len)
 {
     if (!start_socket())

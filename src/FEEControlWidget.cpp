@@ -1353,6 +1353,7 @@ void FEEControlWin::ForceStartDAQ(int nCount, QTime daqTime, int msBufferWaiting
 
     fDAQRuningFlag = 1;
 #ifndef USERDEFINE_DISABLE_ENABLE_INDEPENDENT
+    fBoard->enable_t0(1);
     fBoard->enable_tdc(1);
 #endif
 
@@ -1417,6 +1418,7 @@ void FEEControlWin::StopDAQ()
         fDAQRuningFlag = 0;
         fBoard->SetFifoReadBreak();
 #ifndef USERDEFINE_DISABLE_ENABLE_INDEPENDENT
+        fBoard->enable_t0(0);
         fBoard->enable_tdc(0);
 #endif
     }
