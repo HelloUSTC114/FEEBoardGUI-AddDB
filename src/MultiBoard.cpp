@@ -9,8 +9,7 @@
 #include <QDateTime>
 #include <QScreen>
 #include <QApplication>
-// const std::vector<int> gBoardScanList = {0, 1, 2, 3, 4, 5, 6, 7};
-const std::vector<int> gBoardScanList = {9};
+const std::vector<int> gBoardScanList = {0, 1, 2, 3, 4, 5, 6, 7};
 
 void MultiBoardJob::ScanBoards()
 {
