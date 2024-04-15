@@ -158,8 +158,8 @@ namespace UserDefine
         // std::string localIP;
         // localIP = inet_ntoa(*(struct in_addr *)*info->h_addr_list);
 
-        IP_ADAPTER_INFO pIpAdapterInfo[10];
-        unsigned long stSize = sizeof(IP_ADAPTER_INFO) * 10;
+        IP_ADAPTER_INFO pIpAdapterInfo[256];
+        unsigned long stSize = sizeof(IP_ADAPTER_INFO) * 256;
         int nRel = GetAdaptersInfo(pIpAdapterInfo, &stSize);
         if (nRel > 0)
             return nRel;
