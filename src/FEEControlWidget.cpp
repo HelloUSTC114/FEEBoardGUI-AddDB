@@ -68,6 +68,7 @@ void DAQRuning::startDAQ(FEEControlWin *w)
     }
 
     bool loopFlag = JudgeLoopFlag(w, 0);
+    int updateCounter = 0;
     for (nDAQLoop = 0; loopFlag; nDAQLoop++)
     {
         // clock_t test1 = clock();
@@ -77,8 +78,8 @@ void DAQRuning::startDAQ(FEEControlWin *w)
             break;
         nDAQEventCount += w->GetDataManager()->ProcessFEEData((w->GetBoard()));
         // clock_t test3 = clock();
-
-        emit UpdateDAQCount(w->GetDataManager()->GetHGTotalCount());
+        if((updateCounter++)%10==0)
+            emit UpdateDAQCount(w->GetDataManager()->GetHGTotalCount());
 
         loopFlag = JudgeLoopFlag(w, nDAQEventCount);
         // std::cout << "Clocks: " << test2 - test1 << '\t' << test3 - test2 << std::endl;
