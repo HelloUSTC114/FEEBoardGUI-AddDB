@@ -13,33 +13,86 @@ const std::vector<int> gBoardScanList = {0, 1, 2, 3, 4, 5, 6, 7};
 
 void MultiBoardJob::ScanBoards()
 {
+    // <boardNo, future>
+    std::map<int, QFuture<bool>> futures;
+    std::map<int, bool> flags;
+    QDateTime timeNow = QDateTime::currentDateTime();
+
     for (auto boardNo : gBoardScanList)
     {
         gBoard->InitPort(boardNo);
-        bool flag = 0;
 
         // Test connection
-        auto future = QtConcurrent::run(gBoard, &FEEControl::TestConnect);
-        QDateTime timeNow = QDateTime::currentDateTime();
-        while (future.isRunning())
+        futures[boardNo] = QtConcurrent::run(gBoard, &FEEControl::TestConnect);
+        flags[boardNo] = 0;
+    }
+
+    // Judge whether board scanned for more than 10 s
+    while (1)
+    {
+        bool breakflag = 1;
+        for (auto boardNo : gBoardScanList)
         {
-            // std::cout << "Waiting for board " << boardNo << " to connect..." << std::endl;
-            // std::cout << timeNow.secsTo(QDateTime::currentDateTime()) << std::endl;
-            if (timeNow.msecsTo(QDateTime::currentDateTime()) > 500)
+            if (futures[boardNo].isRunning())
             {
-                future.cancel();
-                break;
+                if (timeNow.msecsTo(QDateTime::currentDateTime()) < 10000)
+                    breakflag = 0;
+                else
+                    futures[boardNo].cancel();
             }
         }
+        if (breakflag)
+            break;
+    }
+
+    for (auto boardNo : gBoardScanList)
+    {
+        auto &future = futures[boardNo];
+        auto &flag = flags[boardNo];
+
         if (future.isCanceled())
-            flag = 0;
+        {
+            flags[boardNo] = 0;
+            std::cout << "Board No: " << boardNo << "\tConnection Timeout" << std::endl;
+        }
         else
-            flag = future.result();
+            flags[boardNo] = future.result();
 
         std::cout << "Board No: " << boardNo << "\tSuccess: " << flag << std::endl;
         emit UpdateBoardStatus(boardNo, flag);
     }
     emit BoardsScanned();
+    
+    // for (auto boardNo : gBoardScanList)
+    // {
+    //     gBoard->InitPort(boardNo);
+    //     bool flag = 0;
+
+    //     // Test connection
+    //     auto future = QtConcurrent::run(gBoard, &FEEControl::TestConnect);
+    //     QDateTime timeNow = QDateTime::currentDateTime();
+    //     while (future.isRunning())
+    //     {
+    //         // std::cout << "Waiting for board " << boardNo << " to connect..." << std::endl;
+    //         // std::cout << timeNow.secsTo(QDateTime::currentDateTime()) << std::endl;
+    //         if (timeNow.msecsTo(QDateTime::currentDateTime()) > 500)
+    //         {
+    //             future.cancel();
+    //             break;
+    //         }
+    //     }
+    //     if (future.isCanceled())
+    //     {
+    //         flag = 0;
+    //         std::cout << "Board No: " << boardNo << "\tConnection Timeout" << std::endl;
+    //     }
+    //     else
+    //         flag = future.result();
+
+    //     std::cout << "Board No: " << boardNo << "\tSuccess: " << flag << std::endl;
+    //     emit UpdateBoardStatus(boardNo, flag);
+    // }
+    // emit BoardsScanned();
 }
 
 MultiBoard::MultiBoard(QWidget *parent) : QMainWindow(parent),
@@ -153,12 +206,17 @@ void MultiBoard::ScanBoards()
 #include <QLabel>
 void MultiBoard::UpdateLists()
 {
+    std::cout << "Updating board list in UI" << std::endl;
+    RefreshLists();
+    return;
+    // Here is abnormal, failure for rescan, change status to 0
     for (int idx = 0; idx < ui->listBoards->count(); idx++)
     {
         auto item = ui->listBoards->item(idx);
         auto label = dynamic_cast<QLabel *>(ui->listBoards->itemWidget(item));
         auto boardNo = label->text().split("\t")[1].toInt();
         auto status = fBoardStatus[boardNo];
+        std::cout << "list idx: " << idx << '\t' << " Board No: " << boardNo << " Status: " << fBoardStatus[boardNo] << std::endl;
         if (status)
         {
             label->setStyleSheet("QLabel { background-color : green; color : black; }");
@@ -172,6 +230,8 @@ void MultiBoard::UpdateLists()
             flblConnectionStatus[boardNo]->setStyleSheet("QLabel { background-color : red; color : black; }");
         }
     }
+
+    std::cout << std::endl;
 }
 
 void MultiBoard::ClearLists()
@@ -183,9 +243,14 @@ void MultiBoard::ClearLists()
 void MultiBoard::RefreshLists()
 {
     ui->listBoards->clear();
+    // Here is normal, success for rescan, can find the board
+    std::cout << "Updating board status in UI" << std::endl;
+
     for (auto &board : fBoardStatus)
     {
         QString status = board.second ? "Connected" : "Not connected";
+
+        std::cout << "boardNo: " << board.first << "\t status: " << board.second << std::endl;
         // ui->listBoards->addItem(QString("Board No: %1\tStatus: %2").arg(board.first).arg(status));
         auto label = new QLabel(QString("Board No:\t%1\tStatus:%2").arg(board.first).arg(status));
         if (board.second)
@@ -204,6 +269,7 @@ void MultiBoard::RefreshLists()
         ui->listBoards->addItem(item);
         ui->listBoards->setItemWidget(item, label);
     }
+    std::cout << std::endl;
 }
 
 void MultiBoard::ProcessConnection()
@@ -213,6 +279,8 @@ void MultiBoard::ProcessConnection()
         if (board.second)
             if (!fBoardConnections[board.first]->IsInitialized())
                 fBoardConnections[board.first]->InitBoard(board.first);
+            else
+                fBoardConnections[board.first]->ProcessConnection();
     }
 }
 
@@ -252,6 +320,8 @@ void MultiBoard::UpdateStatus()
 
 void MultiBoard::handle_BoardStatus(int boardNo, bool status)
 {
+    std::cout << "Changing status of board " << boardNo << '\t';
+    std::cout << "From " << fBoardStatus[boardNo] << " To " << status << std::endl;
     fBoardStatus[boardNo] = status;
     RefreshLists();
 }
@@ -458,7 +528,7 @@ void MultiBoard::on_listBoards_currentRowChanged(int currentRow)
     static int count = 0;
     // qDebug() << "Current Row: " << ui->listBoards->currentRow() << count++ << endl;
     auto row = currentRow;
-    UpdateLists();
+    // UpdateLists();
     ui->listBoards->setCurrentRow(row);
     if (row < 0 || row >= ui->listBoards->count())
     {
@@ -470,6 +540,19 @@ void MultiBoard::on_listBoards_currentRowChanged(int currentRow)
         label->setStyleSheet("QLabel { background-color : blue; color : red; }");
     else
         label->setStyleSheet("QLabel { background-color : blue; color : green; }");
+
+    for (int i = 0; i < ui->listBoards->count(); i++)
+    {
+        if (i != row)
+        {
+            auto item = ui->listBoards->item(i);
+            auto label = dynamic_cast<QLabel *>(ui->listBoards->itemWidget(item));
+            if (label->text().contains("Not connected"))
+                label->setStyleSheet("QLabel { background-color : red; color : black; }");
+            else
+                label->setStyleSheet("QLabel { background-color : green; color : black; }");
+        }
+    }
 }
 
 void MultiBoard::on_listBoards_itemDoubleClicked(QListWidgetItem *item)

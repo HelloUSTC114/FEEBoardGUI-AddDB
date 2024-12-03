@@ -220,6 +220,11 @@ bool FEEControl::hg_queue_length_read(int &len)
     return length_read(up_getHgQueueLen, len);
 }
 
+bool FEEControl::hg_queue_length_read_no_timewait(int &len)
+{
+    return length_read_no_timewait(up_getHgQueueLen, len);
+}
+
 bool FEEControl::hg_data_read(int data_num, uint32_t *data_addr)
 {
     return data_read(up_getHgData, data_num, data_addr);
@@ -233,6 +238,11 @@ bool FEEControl::lg_fifo_length_read(int &len)
 bool FEEControl::lg_queue_length_read(int &len)
 {
     return length_read(up_getLgQueueLen, len);
+}
+
+bool FEEControl::lg_queue_length_read_no_timewait(int &len)
+{
+    return length_read_no_timewait(up_getLgQueueLen, len);
 }
 
 bool FEEControl::lg_data_read(int data_num, uint32_t *data_addr)
@@ -263,6 +273,11 @@ bool FEEControl::tdc_fifo_length_read(int &len)
 bool FEEControl::tdc_queue_length_read(int &len)
 {
     return length_read(up_getTdcQueueLen, len);
+}
+
+bool FEEControl::tdc_queue_length_read_no_timewait(int &len)
+{
+    return length_read_no_timewait(up_getTdcQueueLen, len);
 }
 
 bool FEEControl::tdc_data_read(int data_num, uint32_t *data_addr)
@@ -452,6 +467,24 @@ bool FEEControl::length_read(cmd_up cmd, int &len)
     return true;
 }
 
+bool FEEControl::length_read_no_timewait(cmd_up cmd, int &len)
+{
+    if (!start_socket_no_timewait())
+    {
+        return false;
+    }
+    if (!send_cmd(cmd, NULL, 1))
+    {
+        return false;
+    }
+    if (!recv_data((char *)(&len), sizeof(int)))
+    {
+        return false;
+    }
+    close_socket();
+    return true;
+}
+
 bool FEEControl::data_read(cmd_up cmd, int data_num, uint32_t *data_addr)
 {
     // auto test1 = clock();
@@ -540,6 +573,8 @@ bool FEEControl::send_cmd(cmd_up input_cmd, char *arg, int size)
     }
     if (!SendAll(cmd, size))
     {
+        int err_code = WSAGetLastError(); //获取错误代码
+        printf("send error with code: %d\n",err_code);
         cout << "send error." << endl;
         close_socket();
         return false;
@@ -551,6 +586,8 @@ bool FEEControl::recv_data(char *buffer, int size)
 {
     if (!RecvAll(buffer, size))
     {
+        int err_code = WSAGetLastError(); //获取错误代码
+        printf("receive error with code: %d\n",err_code);
         cout << "receive error." << endl;
         close_socket();
         return false;
@@ -657,6 +694,76 @@ bool FEEControl::start_socket()
     sockAddr.sin_port = htons(fPort);
     if (connect(fSock, (SOCKADDR *)&sockAddr, sizeof(SOCKADDR)) == SOCKET_ERROR)
     {
+        int err_code = WSAGetLastError(); //获取错误代码
+        printf("connect error with code: %d\n",err_code);
+        cout << "Board: " << fBoardNum << " Connect error." << endl;
+        fSockInitFlag = 0;
+        close_socket();
+#ifdef USE_FEE_CONTROL_MONITOR
+        gFEEMonitor->ProcessConnectionBroken(fBoardNum);
+#endif
+        fConnectionFlag = false;
+        return false;
+    }
+    fSockInitFlag = true;
+    return fSockInitFlag;
+}
+
+bool FEEControl::start_socket_no_timewait()
+{
+    mutex.lock();
+    if (WSAStartup(MAKEWORD(2, 2), &fWsaData) != 0)
+    {
+        fSockInitFlag = false;
+        cout << "Startup error." << endl;
+        return false;
+    }
+
+    // create socket
+    fSock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (fSock == INVALID_SOCKET)
+    {
+        fSockInitFlag = false;
+        cout << "Socket error." << endl;
+        return false;
+    }
+
+    /*
+    Add TCP protocol control
+    */
+    // set socket buffer length
+    int opt = 1;
+    int SendBufSize = 7944192;
+    int RecvBufSize = 7944192;
+    // int getSendBuf, getRecvBuf;
+    // socklen_t sendBufSizeLen = sizeof(getSendBuf);
+    // socklen_t RecvBufSizeLen = sizeof(getRecvBuf);
+    // getsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char *)&getSendBuf, &sendBufSizeLen);
+    // getsockopt(sock, SOL_SOCKET, SO_RCVBUF, (char *)&getRecvBuf, &RecvBufSizeLen);
+    // printf("send buffer size: %d, recv buffer size: %d\n", getSendBuf, getRecvBuf);
+
+
+    BOOL bDontLinger = FALSE;
+    setsockopt(fSock,SOL_SOCKET,SO_DONTLINGER,(const char*)&bDontLinger,sizeof(BOOL)); //不经历TIME WAIT直接关闭
+
+    setsockopt(fSock, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, sizeof(opt));
+    setsockopt(fSock, SOL_SOCKET, SO_SNDBUF, (char *)&SendBufSize, sizeof(int));
+    setsockopt(fSock, SOL_SOCKET, SO_RCVBUF, (char *)&RecvBufSize, sizeof(int));
+
+    // getsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char *)&getSendBuf, &sendBufSizeLen);
+    // getsockopt(sock, SOL_SOCKET, SO_RCVBUF, (char *)&getRecvBuf, &RecvBufSizeLen);
+    // printf("send buffer size: %d, recv buffer size: %d\n", getSendBuf, getRecvBuf);
+
+    // Connect to the server
+    sockaddr_in sockAddr;
+    memset(&sockAddr, 0, sizeof(sockAddr));
+    sockAddr.sin_family = AF_INET;
+    sockAddr.sin_addr.s_addr = inet_addr(ip_address.c_str());
+    sockAddr.sin_port = htons(fPort);
+    if (connect(fSock, (SOCKADDR *)&sockAddr, sizeof(SOCKADDR)) == SOCKET_ERROR)
+    {
+        int err_code = WSAGetLastError(); //获取错误代码
+        printf("connect error with code: %d\n",err_code);
         cout << "Connect error." << endl;
         fSockInitFlag = 0;
         close_socket();
@@ -1079,11 +1186,11 @@ bool FEEControl::ReadFifo(int sleepms, int leastNEvents)
     // Deside when to start read queue, break flag means force to stop loop
     while (!fBreakFlag)
     {
-        if (!hg_queue_length_read(fHGQueueLengthMonitor))
+        if (!hg_queue_length_read_no_timewait(fHGQueueLengthMonitor))
             break;
-        if (!lg_queue_length_read(fLGQueueLengthMonitor))
+        if (!lg_queue_length_read_no_timewait(fLGQueueLengthMonitor))
             break;
-        if (!tdc_queue_length_read(fTDCQueueLengthMonitor))
+        if (!tdc_queue_length_read_no_timewait(fTDCQueueLengthMonitor))
             break;
         // std::cout << "hg length: " << fHGQueueLengthMonitor << std::endl;
         if (fHGQueueLengthMonitor > nEvents * fHGPointFactor)
@@ -1094,9 +1201,9 @@ bool FEEControl::ReadFifo(int sleepms, int leastNEvents)
     fBreakFlag = 0; // Set break flag to zero, regardless of whether is break.
 
     // Judge read length
-    hg_queue_length_read(fHGQueueLengthMonitor);
-    lg_queue_length_read(fLGQueueLengthMonitor);
-    tdc_queue_length_read(fTDCQueueLengthMonitor);
+    hg_queue_length_read_no_timewait(fHGQueueLengthMonitor);
+    lg_queue_length_read_no_timewait(fLGQueueLengthMonitor);
+    tdc_queue_length_read_no_timewait(fTDCQueueLengthMonitor);
     fReadGroupMonitor = fHGQueueLengthMonitor / (fHGPointFactor * fRetrieveUnit);
 
     // Compare queue length with save array length, take smaller one as read length
